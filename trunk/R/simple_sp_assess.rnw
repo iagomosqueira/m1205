@@ -190,6 +190,8 @@ maxF <- maxFfactor * fmsy
 
 # One way trip
 #F1 <- maxF*sin(seq(from=0,to=pi/2,length=maxt))[-1]
+# This gives a very weird confidence shape for Bcurrent...
+# 
 
 # Some contrast
 F1 <- maxF*sin(seq(from=0,to=pi,length=maxt))[-1]
@@ -304,7 +306,8 @@ print(ggplot(as.data.frame(sselq)) + geom_line(aes(age,data)) + ylab("Survey cat
 
 We now apply this selectivity to the population, and sum to get the index of abundance.
 We assume that the survey takes place half way through the year
-and we'll scale the abundance down by a 1000:
+and we'll scale the abundance down by a 1000. There is no observation error. The index
+is asssumed to be perfectly known.
 
 <<label=survey_generation>>=
 index <- apply(sweep(stk1@stock.n * exp(stk1@m/2) * stk1@stock.wt,1:5,sselq,"*"),2:6,sum)/1000
@@ -332,7 +335,7 @@ will need more iterations.
 set.seed(1234)
 @
 
-<<label=best_assessment, quiet=TRUE>>=
+<<label=best_assessment, quiet=TRUE, results=hide>>=
 flsp <- FLsp(catch=catch, index=index)
 lower <- c(1e-4,max(catch))
 upper <- c(4,1e6)
@@ -340,6 +343,26 @@ flsp <- fitsp(flsp, lower=lower, upper=upper,
  control=DEoptim.control(itermax=2000, trace=200))
 @
 
+\subsection{Is the estimated model any good}
+
+The 'true' biomass from the stock object can be compared to the biomass from the fitted surplus production model
+(Figure~\ref{fig:compB}).
+The trend is good but the actual values are not great.
+We'll ignore the fact that the model does not actually give great results and focus
+on the issue of confidence.
+
+\begin{figure}
+<<label=plotBtrueBest, echo=FALSE, fig=TRUE>>=
+Bdf <- as.data.frame(FLQuants(Btrue = apply(stock.n(stk1) * stock.wt(stk1),2,sum),Bhat = biomass(flsp)[,1:maxt]))
+print(ggplot(Bdf) + geom_line(aes(x=year,y=data,colour=qname)) + scale_x_continuous(name="Year") + scale_y_continuous(name="Biomass"))
+@
+\label{fig:compB}
+\caption{Comparing the true bimoss and the biomass from the fitted surplus production model.}
+\end{figure}
+
+
+\subsection{Goodness of fit}
+It is important to know how well the model fitted.
 Even with contrast in the data, the likelihood profile can be pretty unpleasant to fit over,
 depending on fishing pressure.
 We can see this by holding $k$ at the estimated value and looking at the likelihood
@@ -348,20 +371,20 @@ as $r$ varies. The range of of has be kept very small to see that the spike is r
 
 \begin{figure}
 <<label=plot_r_profile,echo=FALSE,fig=TRUE>>=
-profile(flsp,fixed=list(k=params(flsp)['k',]),maxsteps=1000,range=0.01)
+profile(flsp,fixed=list(k=params(flsp)['k',]),maxsteps=1000,range=0.02)
 @
 \label{fig:r_profile}
 \caption{Likelihood profile as $r$ changes with $k$ fixed at best estimated value of \Sexpr{signif(c(flsp@params['k',]))}.}
 \end{figure}
 
 We can also check that the fit is good by looking at the Hessian matrix. $FLsp$ uses
-automatic differentiation (implemented using ADOLC) to get exact Hessian matrix.
+automatic differentiation (implemented using ADOLC) to get the exact Hessian matrix.
 Internally, $FLsp$ actually estimates $log(r)$ and $log(k)$ so the Hessian relates
 the changes in the gradient to changes in $log(r)$ and $log(k)$, not $r$ and $k$.
 The values of the Hessian, along with the other parameters can be seen in Table~\ref{tab:all_results}.
 
 (Note: originally I used the Hessian relative to $r$ and $k$, not the logged values.
-I was able to run the following confidence analysis but it was producing a lot of
+I was able to run the following confidence analysis below but it was producing a lot of
 'impossible' $r$ and $k$ combinations, i.e. ones that had an negative infinity likelihood.
 Following Richard Hilary's advice I have now swapped to using the Hessian of the logged
 parameters, which makes sense seeing as I am estimating the logged parameters).
@@ -382,7 +405,7 @@ index_holes1[,nayears1] <- NA
 
 Now set up another $FLsp$ object and fit.
 
-<<label=holes1_assessment, quiet=TRUE>>=
+<<label=holes1_assessment, quiet=TRUE, results=hide>>=
 flsp_holes1 <- FLsp(catch=catch, index=index_holes1)
 lower <- c(1e-4,max(catch))
 upper <- c(4,1e6)
@@ -397,7 +420,7 @@ which means that we are less confident in the results of the assessment (Table~\
 Let's do it again, this time with even more holes. This time there is one year of data to
 two years of missing data:
 
-<<label=setting_up_index_holes2>>=
+<<label=setting_up_index_holes2, results=hide>>=
 nayears2 <- seq(from=idxyrs[1],to=idxyrs[length(idxyrs)],by=3)
 index_holes2 <- index
 index_holes2[,!(idxyrs %in% nayears2)] <- NA
@@ -411,10 +434,10 @@ flsp_holes2 <- fitsp(flsp_holes2, lower=lower, upper=upper,
 The results of all three models can be see in Table~\ref{tab:all_results}.
 
 The estimated parameter values and the corresponding values of $B_{current}$, $MSY$ and $B_{MSY}$ are all very similar.
-However, again the magnitude of the values in the variance-covariance matrix have increased (Table~\ref{tab:all_results}), again
-suggesting tha confidence in these results has decreased.
+However, the magnitude of the values in the variance-covariance matrix have increased even more
+(Table~\ref{tab:all_results}), again suggesting tha confidence in these results has decreased.
 
-What are the consequences of this decreased confidence?
+The important question for management is: what are the consequences of this decreased confidence?
 
 % Ubertable of results
 <<label=df_of_three_spresults,echo=FALSE>>=
@@ -436,24 +459,24 @@ print(xtable(temp,
 
 \section{Consequences of Confidence}
 
-We can use the variance-covariance matrices to produce bootstrapped estimates of $r$ and $k$,
+We can use the variance-covariance matrices to produce bootstrapped estimates of log($r$) and log($k$),
 and therefore bootstrapped estimates of $B_{current}$, $MSY$ and $B_{MSY}$.
 
 %This can be done using a Cholesky decomposition of the variance-covariance matrix.
 %This method makes a bunch of assumptions blah blah.
 
-Originally, I used the Colesky decompostion of the variance-covariance matrix
+Originally, I used the Cholesky decompostion of the variance-covariance matrix
 and multiplied it by i.i.ds to get the bootstrapped estiamtes of $r$ and $k$.
 However, I now use the \emph{rmvnorm()} function in the \emph{mvtnorm} library
-to get the bootstrapped estimates.
+to get the bootstrapped estimates (although this packages uses the same method
+of decomposition).
 
 %Do I need to? Can I just use dmvnorm to get the distribution
 
 The method can be put into a function:
 
-# Check this function!
-
 <<label=conf_func_mvtnorm>>=
+
 conf_sp <- function(sp,nsam=1000)
 {
 	# Do we have vcov
@@ -466,16 +489,34 @@ conf_sp <- function(sp,nsam=1000)
   #apply(rmv,2,mean) # why isn't mean 0?
 	# Make a new object
 	sp_sim <- sp
-	params(sp_sim) <- propagate(params(sp_sim), nrow(rmv))
+	params(sp_sim) <- propagate(params(sp_sim), nsam)
 	params(sp_sim)[] <- t(exp(rmv))
 	return(sp_sim)
+
+  # Is vcov right? - Yes
+  #cov(rmv)
+  #vcovm
+	
+	# Maybe we should check with the old chol version too?
+#	A <- t(chol(vcovm))
+#	Y <- matrix(nrow=nsam,ncol=dim(params(sp))[1])
+#	Y[] <- rnorm(nsam*ncol(Y))
+#	X <- t(apply(Y,1,function(x,A){x <- A%*%x},A))
+#	# Correct for mean
+#	X <- sweep(X,2,log(params(sp)),"+")
+#  cov(X)
+#  par(mfrow=c(2,2))
+#  hist(rmv[,1])
+#  hist(rmv[,2])
+#  hist(X[,1])
+#  hist(X[,2])
 }
 @
 
 This function can then be used to generate bootstrapped $FLsp$ objects.
 
 <<label=bootstrap_assessments>>=
-nsam <- 1000
+nsam <- 10000
 flsp_boot <- conf_sp(flsp,nsam)
 flsp_holes1_boot <- conf_sp(flsp_holes1,nsam)
 flsp_holes2_boot <- conf_sp(flsp_holes2,nsam)
@@ -488,14 +529,6 @@ rkdf <- rbind(cbind(index="full",as.data.frame(sweep(flsp_boot@params,1,flsp@par
 							cbind(index="holes2",as.data.frame(sweep(flsp_holes2_boot@params,1,flsp_holes2@params,"/"))))
 
 print(ggplot(rkdf,aes(x=data)) + geom_histogram() + facet_grid(index ~ params))
-
-#ggplot(rkdf,aes(x=data)) + geom_histogram() + facet_grid(index ~ params)
-ggplot(rkdf[rkdf$index=="full",],aes(x=data)) + geom_histogram()
-
-hist(rkdf[rkdf$index=="full" & rkdf$params=="r","data"])
-hist(rkdf[rkdf$index=="full" & rkdf$params=="k","data"])
-# Estimates of k have gone very wrong....
-
 @
 \caption{Histograms of the bootstrapped $r$ and $k$ values, relative to the 'true' value}
 \label{fig:rk_hist}
@@ -503,14 +536,16 @@ hist(rkdf[rkdf$index=="full" & rkdf$params=="k","data"])
 
 Histograms of the bootstrapped values of $r$ and $k$, relative to the 'true' value can be seen in Figure~\ref{fig:rk_hist}.
 
+% Could also include the likelihoods...?
 \begin{figure}
 <<label=boot_MSYetc,echo=FALSE, fig=TRUE>>=
-msyetcdf <- rbind(data.frame(index="full", MSY=Msy(flsp_boot),BMSY = Bmsy(flsp_boot), BC = speedy_bcurrent(flsp_boot)),
-						data.frame(index="holes1", MSY=Msy(flsp_holes1_boot),BMSY = Bmsy(flsp_holes1_boot), BC = speedy_bcurrent(flsp_holes1_boot)),
-						data.frame(index="holes2", MSY=Msy(flsp_holes2_boot),BMSY = Bmsy(flsp_holes2_boot), BC = speedy_bcurrent(flsp_holes2_boot)))
+msyetcdf <- rbind(data.frame(index="full", MSY=Msy(flsp_boot),BMSY = Bmsy(flsp_boot), BC = speedy_bcurrent(flsp_boot), ll = speedy_ll(flsp_boot)),
+						data.frame(index="holes1", MSY=Msy(flsp_holes1_boot),BMSY = Bmsy(flsp_holes1_boot), BC = speedy_bcurrent(flsp_holes1_boot), ll = speedy_ll(flsp_holes1_boot)),
+						data.frame(index="holes2", MSY=Msy(flsp_holes2_boot),BMSY = Bmsy(flsp_holes2_boot), BC = speedy_bcurrent(flsp_holes2_boot), ll = speedy_ll(flsp_holes2_boot)))
 # melt this to single value column
 meltdf <- melt(msyetcdf,id.vars="index")
-print(ggplot(meltdf,aes(x=value)) + geom_histogram() + facet_grid(index ~ variable, scales="free"))
+# don't plot the likelihood
+print(ggplot(meltdf[meltdf$variable != "ll",],aes(x=value)) + geom_histogram() + facet_grid(index ~ variable, scales="free"))
 @
 \caption{Histograms of derived measures for the three index holes scenarios}
 \label{fig:hist_msy_holes}
@@ -521,167 +556,32 @@ We can do the same thing for the derived measures $B_{current}$, $MSY$ and $B_{M
 This clearly shows that as the number of holes in the index data increases, the confidence in the estimated parameters $r$ and $k$ and
 the derived measures decreases.
 
-Some of the bootstrapped pairs of values of $r$ and $k$ actually result in a value
-of 0 for $B_{current}$, i.e. the combination of $r$ and $k$ has led to the population
-crashing.
-
-What does this mean?
-Although the histograms show the uncertainty
-in the best estimate of $B_{current}$, we know that the population
-hasn't actually crashed.
-
-This is because our bootstrapping method is limited. The generated pairs of values of $r$ and $k$ might be
-statistically consistent with the covariance matrix, but the covariance matrix is
-only an approximation to the 'true' confidence in the parameters. Clearly we cannot have
-pairs of parameter values that we know are not possible.
-For example, there is no point in saying that there
-is a 10\% chance that the population is extinct when we know that in reality is is still alive.
-
-We therefore have to do some tidying up of the generated pairs of values.
-
-<<label=getLL_of_rk_pairs_holes, echo=FALSE>>=
-ll_holes2 <- speedy_ll(flsp_holes2_boot)
-ll_holes1 <- speedy_ll(flsp_holes1_boot)
-ll_full <- speedy_ll(flsp_boot)
-@
-
-First let's take a look at the likelihood of each pair of parameter values for the
-scenario where there are most hole in the index. Out of the
-\Sexpr{length(c(ll_holes2))} values, \Sexpr{sum(is.nan(c(ll_holes2)))} are NaN.
-This happens when the population crashes.
-This means that there are \Sexpr{sum(is.nan(c(ll_holes2)))} pairs of $r$ and $k$ values that
-lead to an impossible outcome.
-
-<<label=min_n,echo=FALSE>>=
-minn <- 1000
-# What is the minimum number of pairs
-minpair <- max(minn,min(sum(!is.nan(ll_holes2)),sum(!is.nan(ll_holes1)),sum(!is.nan(ll_full))))
-@
-
-This still leaves \Sexpr{length(c(ll_holes2)) - sum(is.nan(c(ll_holes2)))} pairs that
-are 'good'. Obviously we want as many as possible.
-At a rough guess I would say we want at least 200 'good' pairs to give us
-a rough picture of the confidence in our parameter estimates.
-For comparison, we want the number to be the same for all three scenarios.
-
-One method of building a picture of the confidence is by randomly sampling from the 'good' pairs
-based on their likelihood (the more likely pairs have a higher chance of being picked).
-We do this by scaling the sum of the likelihoods between 0 and 1,
- picking \Sexpr{minn} values from a uniform distribution between 0 and 1 and
-using this value to select which pair. The pairs of $r$ and $k$ that lead to extinction
-have a probability of 0, i.e. are never picked.
-
-<<label=pick_pairs>>=
-pick_pairs <- function(flsp,minn)
-{
-	lls <- speedy_ll(flsp)
-	lls[is.nan(lls)] <- NA
-	lls_shift <- lls - min(lls,na.rm=T)
-	scaled_lls <- (lls_shift) / sum(lls_shift,na.rm=T)
-	# Set prob of NA to 0 so they never get picked
-	scaled_lls[is.na(scaled_lls)] <- 0
-	# Pick the pairs
-	rkpairs <- sapply(runif(minn),function(x) which(cumsum(c(scaled_lls))>=x)[1])
-	return(rkpairs)
-}
-
-flsp_full_boot2 <- iter(flsp_boot,pick_pairs(flsp_boot,minn=minpair))
-flsp_holes1_boot2 <- iter(flsp_holes1_boot,pick_pairs(flsp_holes1_boot,minn=minpair))
-flsp_holes2_boot2 <- iter(flsp_holes2_boot,pick_pairs(flsp_holes2_boot,minn=minpair))
-@
-
-Actually, there is no real need to do the above. It is only necessary if a real likelihood
-is returned when the population crashes, when really the likelihood should be $NaN$ or $Inf$.
-This is often done if the solver demands the function it is solving over is continuous.
-In these cases, the likelihood should be very heavily penalised and the probability of being
-selected in the above routine set to 0.
-
-As $FLsp$ currently stands, when the population crashes the likelihood is $NaN$ or $Inf$.
-We could therefore just sample from the non-$NaN$ likelihood pairs, or even just pick the first
-\Sexpr{minn} non-$NaN$ pairs. The above method is included for completeness.
-
-% Why can't we just randomly pick from the good pairs? Why do we need to pick them
-% based on their likelihood? There are already many likely pairs than unlikely ones
-% so just randomly sampling from them will preserve the structure, no?
-
-However, when I've tried it I've found that the resulting confidences look oddly truncated.
-We try the 'just drop the impossible pairs method' below.
-
-<<label=dropNaNs>>=
-# Or we just miss out the NaNs
-drop_NaNs <- function(flsp)
-{
-	lls <- speedy_ll(flsp)
-	dropthese <- which(is.nan(lls))
-	flsp@params <- flsp@params[,-dropthese]
-	return(flsp)
-}
-
-flsp_full_boot2 <- drop_NaNs(flsp_boot)
-flsp_holes1_boot2 <- drop_NaNs(flsp_holes1_boot)
-flsp_holes2_boot2 <- drop_NaNs(flsp_holes2_boot)
-@
-
-Actually, there is no real need to do the above. It is only necessary if a real likelihood
-is returned when the population crashes, when really the likelihood should be $NaN$ or $Inf$.
-This is often done if the solver demands the function it is solving over is continuous.
-In these cases, the likelihood should be very heavily penalised and the probability of being
-selected in the above routine set to 0.
-
-As $FLsp$ currently stands, when the population crashes the likelihood is $NaN$ or $Inf$.
-We could therefore just sample from the non-$NaN$ likelihood pairs, or even just pick the first
-\Sexpr{minn} non-$NaN$ pairs. The above method is included for completeness.
-
-% Laurie said to plot the sorted likelihoods.
-% He said it would be sigmoid shape - think this is only the case when you have a continuous LL
-% i.e. set minimim B to 1e-9 or something - so you can get LLs even when r and k are weird
-% So he weights the likelihood. i..e. if pop crash, massively negative LL
-% We don't do that because we are using a min pop of 0, so we get NaN if pop crashes
-% Also the sigmoid is only approximate - if all the rk pairs are good then no front tail.
-
-
-% So the next step only matters if we have Bmin != 0?
-% and why do it at all?
-% Scale between 0 and 1.
-% Pick uniform random number between 0 and 1. Sample from LLs, with replacement.
-% How will this be different to our original spread of rkpairs?
-% Surely we still have a chance of picking a 'dud' rkpair?
-% This will only work if all the 'dud' rkpair have the same likelihood (probably heavily weighted)
-% and the prob of picking it is 0.
-
-% So this whole rescale thing is uncessary of we return -Inf, cut out the NaNs and keep
-% generating covars until we have enough
-
-We can now plot again the various measures (Figure~\ref{fig:hist_msy_holes_tidy}).
-
-\begin{figure}
-<<label=boot_MSYetc_tidy,echo=FALSE, fig=TRUE>>=
-msyetcdf2 <- rbind(data.frame(index="full", MSY=Msy(flsp_full_boot2),BMSY = Bmsy(flsp_full_boot2), BC = speedy_bcurrent(flsp_full_boot2)),
-						data.frame(index="holes1", MSY=Msy(flsp_holes1_boot2),BMSY = Bmsy(flsp_holes1_boot2), BC = speedy_bcurrent(flsp_holes1_boot2)),
-						data.frame(index="holes2", MSY=Msy(flsp_holes2_boot2),BMSY = Bmsy(flsp_holes2_boot2), BC = speedy_bcurrent(flsp_holes2_boot2)))
-# melt this to single value column
-meltdf2 <- melt(msyetcdf2,id.vars="index")
-print(ggplot(meltdf2,aes(x=value)) + geom_histogram() + facet_grid(index ~ variable, scales="free"))
-@
-\caption{Histograms of derived measures for the three index holes scenarios with the $r$-$k$ pairs tidied up.}
-\label{fig:hist_msy_holes_tidy}
-\end{figure}
-
-The quantiles of the various measures can be seen in Table~\ref{tab:quant}.
-
-Quick tests have shown that almost all bootstrapped Bcurrent values are 0 for
-with the 'one-way-trip' scenario when maxFfactor = 2.
-
 <<label=quantiles, echo=FALSE>>=
-temp <- melt(msyetcdf2, id.vars="index")
+#temp <- melt(msyetcdf2, id.vars="index")
 qfunc <- function(sub)
 	quantile(sub$value, c(0.05,0.25,0.5,0.75,0.95))
 
-qu <- ddply(temp, .(index,variable), qfunc)
+qu <- ddply(meltdf[meltdf$variable != "ll",], .(index,variable), qfunc)
 # Need to reshape this
 qum <- melt(qu, id.vars=c("index","variable"), variable_name="quantile")
 qudf <- cast(qum, index + variable ~ quantile)
 qudf <- qudf[order(qudf$variable),]
+
+# Compare to true stock? But true stock should have one more year
+# Bcurrent does
+#evalC(flsp)$B
+#stock(stk1)
+# It's terrible!
+# K should be unfished biomass - out by a half! Even though B0 is at K
+# Estimated K is very poor
+# Do we need to worry about that...?
+# And why is it so poor?
+# Can we fix K at true K and look at the likelihood?
+#truek <- stock(stk1)[,1]
+#profile(flsp,fixed=list(k=truek),maxsteps=1000,range=1)
+# Get the actual ll at this peak
+
+
 @
 
 <<label=write_qudftable, results=tex, echo=FALSE>>=
@@ -693,59 +593,174 @@ print(xtable(qudf,
 #				floating.environment = 'sidewaystable')
 @
 
-\section{Alternative confidence}
-<<>>=
+The quantiles of the various measures can be seen in Table~\ref{tab:quant}.
+The quantiles have not been hugely affected by the holeiness of the data.
 
-sp <- flsp
+\section{Observation error}
 
-slotNames(sp)
-sp@vcov_log
-sp@vcov
-# With log vcov K is smaller than r. Is this right?
-library(mvtnorm)
-vcov_log <- matrix(sp@vcov_log,nrow=2)
-vcov <- matrix(sp@vcov,nrow=2)
-sam <- rmvnorm(2000, sigma=vcov)
-sam_log <- rmvnorm(2000, sigma=vcov_log)
-# Correct for mean
-sam <- sweep(sam,2,params(sp),"+")
-sam_log <- sweep(sam_log,2,log(params(sp)),"+")
+Another impact of reducing sampling effort is likely to be an increase in observation error.
+This may result from reducing the number of sampling stations.
+The above analysis was performed without observation error, i.e. the index
+was assumed to be perfect.
+Here we perform a similar analysis to the one above but use different levels of observation error (Figure~\ref{fig:obserrorindex}).
+Observation error is assumed to be multiplicative and log-normal with a constant coefficient
+of variation.
 
-#par(mfrow=c(3,2))
-#hist(sam[,1],main="r")
-#hist(sam[,2],main="k")
-#hist(sam_log[,1],main="log r")
-#hist(sam_log[,2],main="log k")
-#hist(exp(sam_log[,1]),main="exp log r")
-#hist(exp(sam_log[,2]),main="exp log k")
+<<label=setObserrorIndex, keep.source=T>>=
+sd_index <- c(0.2,0.4,0.6)
+noise_quant1 <- FLQuant(rlnorm(prod(dim(stk1@stock.n)),0,sd_index[1]),
+  dimnames=dimnames(stk1@stock.n))
+noise_quant2 <- FLQuant(rlnorm(prod(dim(stk1@stock.n)),0,sd_index[2]),
+  dimnames=dimnames(stk1@stock.n))
+noise_quant3 <- FLQuant(rlnorm(prod(dim(stk1@stock.n)),0,sd_index[3]),
+  dimnames=dimnames(stk1@stock.n))
+index_noise1 <- apply(sweep(stk1@stock.n * noise_quant1 * exp(stk1@m/2) *
+  stk1@stock.wt,1:5,sselq,"*"),2:6,sum)/1000
+index_noise2 <- apply(sweep(stk1@stock.n * noise_quant2 * exp(stk1@m/2) *
+  stk1@stock.wt,1:5,sselq,"*"),2:6,sum)/1000
+index_noise3 <- apply(sweep(stk1@stock.n * noise_quant3 * exp(stk1@m/2) *
+  stk1@stock.wt,1:5,sselq,"*"),2:6,sum)/1000
+@
 
-flsp_holes2_boot2 <- flsp_holes2_boot
-flsp_holes2_boot2@params['r',] <- exp(sam_log[,1])
-flsp_holes2_boot2@params['k',] <- exp(sam_log[,2])
+\begin{figure}
+<<label=plotObserror,echo=FALSE,fig=T>>=
+indices <- FLQuants(index=index,index_noise1=index_noise1,index_noise2=index_noise2,index_noise3=index_noise3)
+indices_df <- as.data.frame(indices)
+print(ggplot(indices_df) + geom_line(aes(x=year,y=data,colour=qname)))
+@
+\caption{The tuning index with no noise and with three levels of log-normal, multiplicative noise.}
+\label{fig:obserrorindex}
+\end{figure}
 
-flsp_holes2_boot3 <- flsp_holes2_boot
-flsp_holes2_boot3@params['r',] <- sam[,1]
-flsp_holes2_boot3@params['k',] <- sam[,2]
+We'll fit these up, placing the results in a list of $FLsp$ objects (to make things neat).
+The variance-covariance matrices increases in magnitude as the observation error increases, showing that
+we are less and less certain about the assessment (Table~\ref{tab:vcovobserror}).
+
+<<label=fitObserror, results=hide>>=
+flsps <- list()
+lower <- c(1e-4,max(catch))
+upper <- c(4,1e6)
+for (i in 1:length(indices))
+{
+	cat("i: ", i, "\n")
+	flsps[[i]] <-FLsp(catch=catch, index=indices[[i]])
+	flsps[[i]] <- fitsp(flsps[[i]], lower=lower, upper=upper,
+ 	control=DEoptim.control(itermax=1500, trace=300))
+}
+@
+
+<<label=tab_vcov_obserror,echo=FALSE>>=
+vcovtab <- ldply(flsps, function(x)x@vcov_log)
+dimnames(vcovtab) <- list(Obs_error_sd = c(0,sd_index), vcov_element = c("rr","rk","kr","kk"))
+@
+
+<<label=write_table_obserror_vcov, results=tex, echo=FALSE>>=
+print(xtable(vcovtab,
+				caption="Variance-covariance matrix as the observation error increases",
+				label="tab:vcovobserror",
+				digits=-2
+				))
+@
+
+As before, we'll bootstrap the assessment results (Figures~\ref{fig:bootobserrorresults} and \ref{fig:bootobserrormeasures}).
+
+<<label=bootobserror>>=
+# Bootstrap them with the covariance
+nsam <- 10000
+flsps_boot <- lapply(flsps, function(x) conf_sp(x,nsam))
+@
 
 
-ll_holes22 <- speedy_ll(flsp_holes2_boot2)
-bc22 <- speedy_bcurrent(flsp_holes2_boot2)
-ll_holes23 <- speedy_ll(flsp_holes2_boot3)
-bc23 <- speedy_bcurrent(flsp_holes2_boot3)
+\begin{figure}
+<<label=plotbootobserror,fig=T,echo=FALSE>>=
+# Look at the histograms of r and k
+rkdf <- rbind(cbind(index="noise0",as.data.frame(sweep(flsps_boot[[1]]@params,1,flsps[[1]]@params,"/"))),
+							cbind(index="noise1",as.data.frame(sweep(flsps_boot[[2]]@params,1,flsps[[2]]@params,"/"))),
+							cbind(index="noise2",as.data.frame(sweep(flsps_boot[[3]]@params,1,flsps[[3]]@params,"/"))),
+							cbind(index="noise3",as.data.frame(sweep(flsps_boot[[4]]@params,1,flsps[[4]]@params,"/"))))
+print(ggplot(rkdf,aes(x=data)) + geom_histogram() + facet_grid(index ~ params))
+@
+\caption{Bootstrapped parameters from increasing observation error.}
+\label{fig:bootobserrorresults}
+\end{figure}
+
+\begin{figure}
+<<label=plotbootobserrormeasures,echo=FALSE,fig=T>>=
+# And of the derived measures
+msyetcdf <- rbind(
+						data.frame(index="noise0", MSY=Msy(flsps_boot[[1]]),BMSY = Bmsy(flsps_boot[[1]]), BC = speedy_bcurrent(flsps_boot[[1]])),
+						data.frame(index="noise1", MSY=Msy(flsps_boot[[2]]),BMSY = Bmsy(flsps_boot[[2]]), BC = speedy_bcurrent(flsps_boot[[2]])),
+						data.frame(index="noise2", MSY=Msy(flsps_boot[[3]]),BMSY = Bmsy(flsps_boot[[3]]), BC = speedy_bcurrent(flsps_boot[[3]])),
+						data.frame(index="noise3", MSY=Msy(flsps_boot[[4]]),BMSY = Bmsy(flsps_boot[[4]]), BC = speedy_bcurrent(flsps_boot[[4]])))
+# melt this to single value column
+meltdf <- melt(msyetcdf,id.vars="index")
+print(ggplot(meltdf,aes(x=value)) + geom_histogram() + facet_grid(index ~ variable, scales="free"))
+@
+\caption{Bootstrapped measures from increasing observation error.}
+\label{fig:bootobserrormeasures}
+\end{figure}
 
 
-par(mfrow=c(2,2))
-hist(ll_holes22,main="ll2")
-hist(bc22,main="bc2")
-hist(ll_holes23,main="ll3")
-hist(bc23,main="bc3")
+<<label=obserrorquantiles, echo=FALSE>>=
+#temp <- melt(msyetcdf2, id.vars="index")
+qfunc <- function(sub)
+	quantile(sub$value, c(0.05,0.25,0.5,0.75,0.95))
 
+qu <- ddply(meltdf[meltdf$variable != "ll",], .(index,variable), qfunc)
+# Need to reshape this
+qum <- melt(qu, id.vars=c("index","variable"), variable_name="quantile")
+qudf <- cast(qum, index + variable ~ quantile)
+qudf <- qudf[order(qudf$variable),]
+@
 
+<<label=write_obserrorqudftable, results=tex, echo=FALSE>>=
+print(xtable(qudf,
+				caption="Quantiles of the three measures for the four observation error scenarios.",
+				label="tab:obsquant",
+				digits=2
+				))
+#				floating.environment = 'sidewaystable')
+@
 
+The quantiles of the various measures can be seen in Table~\ref{tab:obsquant}.
+
+Yep. As observation error increases, we get less certain about everything.
+
+Does anyone care?
+
+\section{Consequences for managament }
+
+If you believe results of the assessment.
+
+Proportion of unfished biomass - BC relative to K
+That's what we want
+As in, what is Blim (20\% of unfished) - 20% K
+Prob of being < 20\% of K
+
+Let's continue with the observation error scenarios.
+$k$ is the average unfished biomass of the stock. We can assume that managers want
+to avoid the fished biomass being less than 20\% of this value.
+
+What is the chance of the current biomass being less than 20\% of the unfished biomass
+for each of the scenarios?
+
+<<label=bc_blim, keep.source=T>>=
+bc_blim<- rep(NA,4)
+for (i in 1:4)
+  bc_blim[i] <- sum(speedy_bcurrent(flsps_boot[[2]]) <
+ (c(flsps_boot[[2]]@params['k',]) * 0.2))
+@
+
+None at all!
+
+<<label=b_blim>>=
+b <- biomass(flsps_boot[[1]])
 @
 
 \section{References}
 
+R
+FLR
 Sweave
 Polacheck
 
