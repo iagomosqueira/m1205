@@ -1,10 +1,12 @@
 rm(list=ls())
 library(FLAdvice)
-#setwd("C:/Projects/m1205/gislaSim/ICES")
-#source("C:/Sandbox/pkg/FLAdvice/R/lh.R")
-setwd("m:/Projects/MF1205/m1205/gislaSim/ICES")
-source("m:/Sandbox/flr/pkg/FLAdvice/R/lh.R")
+setwd("C:/Projects/m1205/gislaSim/ICES")
+source("C:/Sandbox/pkg/FLAdvice/R/lh.R")
+source("C:/Sandbox/pkg/FLAdvice/R/M.R")
+source("C:/Sandbox/pkg/FLAdvice/R/growth.R")
 
+#setwd("m:/Projects/MF1205/m1205/gislaSim/ICES")
+#source("m:/Sandbox/flr/pkg/FLAdvice/R/lh.R")
 
 # load ICES data
 load("data/dbICES.RData")
@@ -47,7 +49,7 @@ p <- ggplot(wgdata) + geom_point(aes(x = age, y = value, group = stock, colour =
 
 # Level one of data poorness.
 # No Selectivity or Virgin Biomass
-# Only Spr0 comparison
+# Only Spr0 refpt comparison
 
 # Just focus on cod for the moment
 wgcod <- wgdata[wgdata$species == "cod",]
@@ -57,82 +59,146 @@ wgcod$stock <- factor(wgcod$stock)
 p <- ggplot(wgcod) + geom_point(aes(x = age, y = value, group = stock, colour = stock)) +
   facet_wrap(~variable, scales="free")
 
-
 # Add Linf, K and mat(?) for each stock
 # Just make them all the same as NS cod at the moment
 age <- 1:30
 NScod_linf <- 132
 NScod_k <- 0.2
 
+# Use gislason natural mortality function
+# Bug with M.R at the moment so need to copy and paste in directly
+#mFn("gislason", par)
+# Inside lh() m. mFn dispatches with T we don't have that - interface problem
+# From Table 1, Gislason 2010 - no T but needs to be included in interface at the moment
+Gislason_model2 <- function(par,len, T) exp(0.55 - 1.61*log(len) + 1.44*log(par["linf"]) + log(par["k"]))
+
+# LH with just Linf
+# Gives warning message - ignore for now
+# Where does default value of k come from?
+# FLPar("k"=exp(0.5236+c(log(par["linf"]))*-0.4540))
 NScodpar1 <- gislasim(FLPar(linf = NScod_linf))
-NScodLH1 <- lh(NScodpar1, age = age)
+#NScodLH1 <- lh(NScodpar1, age = age)
+#NScodLH1 <- lh(NScodpar1, mFn = Gislason_model2, age = age)
+
+# LH with Linf and K
 NScodpar2 <- gislasim(FLPar(linf = NScod_linf, k = NScod_k))
-NScodLH2 <- lh(NScodpar2, age = age)
+#NScodLH2 <- lh(NScodpar2, mFn = Gislason_model2, age = age)
 # Split L-W relationship default into gadoid, demersal etc
 # e.g. for cod is it a = 0.01 or a = 0.001
 
+# LH with Linf, K and a-b (L-W)
+# Check these values!
+NScodpar3 <- gislasim(FLPar(linf = NScod_linf, k = NScod_k, a = 0.00653, b = 3.097))
+#NScodLH3 <- lh(NScodpar3, mFn = Gislason_model2, age = age)
 
-# ddply this up
-lhcod <-  rbind(
-          cbind(wg = "wgnssk", stock = "cod-nsea", lh = "lh1",
-               rbind(
-                    cbind(variable = "stock.wt", as.data.frame(stock.wt(NScodLH1)/1000)),
-                    cbind(variable = "m", as.data.frame(m(NScodLH1))),
-                    cbind(variable = "mat", as.data.frame(mat(NScodLH1)))
-                    )
-              ),
-          cbind(wg = "wgnssk", stock = "cod-nsea", lh = "lh2",
-               rbind(
-                    cbind(variable = "stock.wt", as.data.frame(stock.wt(NScodLH2)/1000)),
-                    cbind(variable = "m", as.data.frame(m(NScodLH2))),
-                    cbind(variable = "mat", as.data.frame(mat(NScodLH2)))
-                    )
+# LH with Linf, K and a-b (L-W) - add maturity
+#NScodpar4 <- gislasim(FLPar(linf = NScod_linf, k = NScod_k, a = 0.0653, b = 3.097))
+#NScodLH4 <- lh(NScodpar4, mFn = Gislason_model2, age = age)
+
+
+# Put all measures of interest into dataframe for plotting
+# Watch units of stock.wt - should come out as kg
+pullOutMeasures <- function(brp){
+  dat <- rbind(
+               cbind(variable = "stock.wt", as.data.frame(stock.wt(brp)/1000)),
+               cbind(variable = "m", as.data.frame(m(brp))),
+               cbind(variable = "mat", as.data.frame(mat(brp)))
               )
-          )
+  # Chop out unwanted columns
+  dat <- dat[,c("variable","age","data")]
+  return(dat)
+}
 
+# Put all together
+NScodpars <- list(lh1 = NScodpar1, lh2 = NScodpar2, lh3 = NScodpar3)
+codLHs <- llply(NScodpars, lh, mFn = Gislason_model2, age = age)
+codLHsdat <- ldply(codLHs, pullOutMeasures)
 
-
-# Chop out unwanted columns
-lhcod <- lhcod[,c("wg","stock","lh","variable","age","data")]
 
 # Plot against the WG cod data
 p <- ggplot(wgcod) + geom_point(aes(x=age, y = value, colour = stock)) +
                      facet_wrap(~variable, scales = "free")
-p <- p + geom_line(aes(x=age, y = data, colour = stock, group = lh), data = lhcod)
+# Add in the LH stocks
+p <- p + geom_line(aes(x=age, y = data, group = .id, colour = .id), data = codLHsdat)
 
-# What's up with m?
-# LK says default function is for Tropicals (including temperature)
-# Check the appendix to make sure his parameter values are right
-# For NS Cod we can specify our own - based on Gislason
-NScodpar1
-class(NScodLH1)
-# Other Gislason (2010) natural mortality function Model 2 without temp
-Gislason_model2 <- function(par,len, T) exp(0.55 - 1.61*log(len) + 1.44*log(par["linf"]) + log(par["k"]))
-NScodLHm2 <- lh(NScodpar1, mFn = Gislason_model2, age = age)
-# Still massive m at age 1 - 3. For Cod?
-# Maybe introducing t0 into vonB?
-# No need - in M.R there are already lots of M models including gislason
-#gislason=function(params,data) #(l,linf,k)
-#   exp(0.55-1.61*log(data) + 1.44*log(params["linf"]) + log(params["k"]))
-NScodLHm2 <- lh(NScodpar1, mFn = gislason, age = age)
-
-# The stock wts aren't right
-# And what is happening with vonB? Is it len or weight?
-# Why is b in there? Is this the L-W b?
-
-
-# The massive m is causing the spr0 to be 0
-NScodLHm02 <-NScodLH1
-m(NScodLHm02)[] <- 0.2
 # spr0 of my new stocks
-spr0(NScodLHm02) # 0?
-spr0(NScodLH1) # 0?
-spr0(NScodLH2)
+llply(codLHs, spr0)
 
-vb <- function(t, linf, k, t0 = 0)
- return(linf * (1 - exp(-k * (t - t0))))
-# age 1 fish =
-vb(1,132,0.2)
+# Need spr0s of the WG stocks
+# This is the dataframe of the stock details
+dbICES$ypr
+dbICES$ts
+dbICES$ages
+dbICES$pa
+
+# This sets the LH values - weights etc
+# Hack until update constructor, should just be:
+#brps=FLBRPs(dlply(dbICES$ypr, .(wg,stock), FLBRP))
+#brps=FLBRPs(dlply(dbICES$ypr[,], .(wg,stock), function(x) FLBRP(x[,-c(1,2,9,10,15)])))
+brps=FLBRPs(dlply(dbICES$ypr[,], .(stock), function(x) FLBRP(x[,-c(1,2,9,10,15)])))
+# Only keep cod brps
+codBrps <-brps[names(brps) %in% unique(wgcod$stock)]
+
+# Also need to add range info (fbar and plusgroup)  from the $ages data.frame
+#   plusgroup will be final age in the ypr data set
+# And add observed landings etc from $ts
+# And ref points
+
+# Add fbar range
+# Do we have all stocks we need in the $ages df?
+# Turn into method with dataframe as extra argument
+all(unique(wgcod$stock) %in% unique(dbICES$ypr$stock))
+# yes
+# split $ages fbarage into min and max
+test <- strsplit(x = as.character(dbICES$ages$fbarage), split= "-")
+fbars <- cbind(wg = dbICES$ages$wg, stock = dbICES$ages$stock, ldply(strsplit(x = as.character(dbICES$ages$fbarage), split= "-"), function(x) return(data.frame(minfbar = x[1], maxfbar = x[2]))))
+# How to pull out the right one? Lose names of the list
+for (brp in names(codBrps)){
+  range(codBrps[[brp]])[c("minfbar","maxfbar")] <-
+    as.numeric(fbars[fbars$stock == brp, c("minfbar","maxfbar")])
+}
+
+# Add plus group argument to dataframe constructor
+
+# Add observed
+slotNames(codBrps[[1]])
+# data we can add from ts
+#landings.obs
+#rec.obs
+#stock.obs <- biomass.obs (or rename in dataframe)
+#ssb.obs
+#fbar.obs
+for (brp in names(codBrps)){
+  # make an FLQuant of the measure
+  sub <- dbICES$ts[dbICES$ts$stock %in% brp,]
+  #lan <- FLQuant(sub$landings.obs, dimnames = list(year = sub$year))
+  #landings.obs(codBrps[[brp]]) <- lan
+  for (slot in c("landings.obs", "rec.obs", "ssb.obs", "fbar.obs")){
+    flq <- FLQuant(sub[,slot], dimnames = list(year = sub$year))
+    slot(codBrps[[brp]], slot) <- flq
+  }
+  flq <- FLQuant(sub$biomass.obs, dimnames = list(year = sub$year))
+  slot(codBrps[[brp]], "ssb.obs") <- flq
+}
+
+#plot(brp(codBrps[[1]])) # fails due to lack of selectivity
+#brp(codBrps[[1]])
+
+# Set precautionary reference points?
+#If you put fpa in the harvest slot of refpts and leave everything else as na brp will calculate all the other quantities. Ie a check for consistency
+#
+dbICES$pa
+refpts(codBrps[[1]])
+for (brp in names(codBrps)){
+  #refpts(codBrps[[brp]])['fpa','harvest']
+  #rbind(refpts(codBrps[[brp]]),NA)
+  # How to add a row to a FLPar?
+}
+
+#vb <- function(t, linf, k, t0 = 0)
+# return(linf * (1 - exp(-k * (t - t0))))
+## age 1 fish =
+#vb(1,132,0.2)
 
 
 # Next
