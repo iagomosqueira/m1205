@@ -1,7 +1,10 @@
 rm(list=ls())
 library(FLAdvice)
-setwd("C:/Projects/m1205/gislaSim/ICES")
-source("C:/Sandbox/pkg/FLAdvice/R/lh.R")
+#setwd("C:/Projects/m1205/gislaSim/ICES")
+#source("C:/Sandbox/pkg/FLAdvice/R/lh.R")
+setwd("m:/Projects/MF1205/m1205/gislaSim/ICES")
+source("m:/Sandbox/flr/pkg/FLAdvice/R/lh.R")
+
 
 # load ICES data
 load("data/dbICES.RData")
@@ -41,20 +44,33 @@ p <- ggplot(wgdata) + geom_point(aes(x = age, y = value, group = stock, colour =
 # Can we scale the plot by max - comparing weights between stocks is bad
 
 #*******************************************************************************
+
+# Level one of data poorness.
+# No Selectivity or Virgin Biomass
+# Only Spr0 comparison
+
 # Just focus on cod for the moment
 wgcod <- wgdata[wgdata$species == "cod",]
+wgcod$stock <- factor(wgcod$stock)
+
 # Cod in North Sea is not here...
+p <- ggplot(wgcod) + geom_point(aes(x = age, y = value, group = stock, colour = stock)) +
+  facet_wrap(~variable, scales="free")
+
 
 # Add Linf, K and mat(?) for each stock
 # Just make them all the same as NS cod at the moment
-ages <- 1:30
+age <- 1:30
 NScod_linf <- 132
 NScod_k <- 0.2
 
 NScodpar1 <- gislasim(FLPar(linf = NScod_linf))
-NScodLH1 <- lh(NScodpar1, age = ages)
+NScodLH1 <- lh(NScodpar1, age = age)
 NScodpar2 <- gislasim(FLPar(linf = NScod_linf, k = NScod_k))
-NScodLH2 <- lh(NScodpar2, age = ages)
+NScodLH2 <- lh(NScodpar2, age = age)
+# Split L-W relationship default into gadoid, demersal etc
+# e.g. for cod is it a = 0.01 or a = 0.001
+
 
 # ddply this up
 lhcod <-  rbind(
@@ -84,10 +100,45 @@ p <- ggplot(wgcod) + geom_point(aes(x=age, y = value, colour = stock)) +
                      facet_wrap(~variable, scales = "free")
 p <- p + geom_line(aes(x=age, y = data, colour = stock, group = lh), data = lhcod)
 
+# What's up with m?
+# LK says default function is for Tropicals (including temperature)
+# Check the appendix to make sure his parameter values are right
+# For NS Cod we can specify our own - based on Gislason
+NScodpar1
+class(NScodLH1)
+# Other Gislason (2010) natural mortality function Model 2 without temp
+Gislason_model2 <- function(par,len, T) exp(0.55 - 1.61*log(len) + 1.44*log(par["linf"]) + log(par["k"]))
+NScodLHm2 <- lh(NScodpar1, mFn = Gislason_model2, age = age)
+# Still massive m at age 1 - 3. For Cod?
+# Maybe introducing t0 into vonB?
+# No need - in M.R there are already lots of M models including gislason
+#gislason=function(params,data) #(l,linf,k)
+#   exp(0.55-1.61*log(data) + 1.44*log(params["linf"]) + log(params["k"]))
+NScodLHm2 <- lh(NScodpar1, mFn = gislason, age = age)
+
+# The stock wts aren't right
+# And what is happening with vonB? Is it len or weight?
+# Why is b in there? Is this the L-W b?
+
+
+# The massive m is causing the spr0 to be 0
+NScodLHm02 <-NScodLH1
+m(NScodLHm02)[] <- 0.2
+# spr0 of my new stocks
+spr0(NScodLHm02) # 0?
+spr0(NScodLH1) # 0?
+spr0(NScodLH2)
+
+vb <- function(t, linf, k, t0 = 0)
+ return(linf * (1 - exp(-k * (t - t0))))
+# age 1 fish =
+vb(1,132,0.2)
+
+
 # Next
-add in WG NSea data to dbICES$ypr
-get more cod stock LH params (not just NSea)
-more levels of LH info (+ LW, mat etc)
+#add in WG NSea data to dbICES$ypr
+#get more cod stock LH params (not just NSea)
+#more levels of LH info (+ LW, mat etc)
 
 # Get Spr0 from WG (in table already or need to put into BRP)
 # Get Spr0 from LH with increasing LHinfo
