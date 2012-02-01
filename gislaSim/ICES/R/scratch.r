@@ -1,14 +1,17 @@
 rm(list=ls())
 library(FLAdvice)
-setwd("C:/Projects/m1205/gislaSim/ICES")
-source("C:/Sandbox/pkg/FLAdvice/R/lh.R")
-source("C:/Sandbox/pkg/FLAdvice/R/M.R")
-source("C:/Sandbox/pkg/FLAdvice/R/growth.R")
+#setwd("C:/Projects/m1205/gislaSim/ICES")
+#source("C:/Sandbox/pkg/FLAdvice/R/lh.R")
+#source("C:/Sandbox/pkg/FLAdvice/R/M.R")
+#source("C:/Sandbox/pkg/FLAdvice/R/growth.R")
+#
+setwd("m:/Projects/MF1205/m1205/gislaSim/ICES")
+source("m:/Sandbox/flr/pkg/FLAdvice/R/lh.R")
+source("m:/Sandbox/flr/pkg/FLAdvice/R/M.R")
+source("m:/Sandbox/flr/pkg/FLAdvice/R/growth.R")
 
-#setwd("m:/Projects/MF1205/m1205/gislaSim/ICES")
-#source("m:/Sandbox/flr/pkg/FLAdvice/R/lh.R")
-
-# load ICES data
+#*******************************************************************************
+# Loading and looking at the ICES data
 load("data/dbICES.RData")
 # What's in it?
 names(dbICES)
@@ -67,7 +70,8 @@ NScod_k <- 0.2
 
 # Use gislason natural mortality function
 # Bug with M.R at the moment so need to copy and paste in directly
-#mFn("gislason", par)
+#mFn("gislason", par, data)
+# But data is length and that is calculated internally
 # Inside lh() m. mFn dispatches with T we don't have that - interface problem
 # From Table 1, Gislason 2010 - no T but needs to be included in interface at the moment
 Gislason_model2 <- function(par,len, T) exp(0.55 - 1.61*log(len) + 1.44*log(par["linf"]) + log(par["k"]))
@@ -114,101 +118,129 @@ NScodpars <- list(lh1 = NScodpar1, lh2 = NScodpar2, lh3 = NScodpar3)
 codLHs <- llply(NScodpars, lh, mFn = Gislason_model2, age = age)
 codLHsdat <- ldply(codLHs, pullOutMeasures)
 
-
 # Plot against the WG cod data
 p <- ggplot(wgcod) + geom_point(aes(x=age, y = value, colour = stock)) +
                      facet_wrap(~variable, scales = "free")
 # Add in the LH stocks
 p <- p + geom_line(aes(x=age, y = data, group = .id, colour = .id), data = codLHsdat)
 
+#*******************************************************************************
+# Make BRPS of the ICES stocks
+# See ICESDataToBrps
+#source("M:/Projects/MF1205/m1205/gislaSim/ICES/R/ICESDataToBrps.r")
+load("M:/Projects/MF1205/m1205/gislaSim/ICES/R/wgBrps.Rdata")
+# They are all in brps - 39 of them
+length(brps)
+
+
 # spr0 of my new stocks
 llply(codLHs, spr0)
 
+spr0(brps[[1]])
+spr0(codLHs[[1]])
+# this works too
+plot(codLHs[[1]])
+# But not for brps
+#llply(brps, spr0)
+
+# Need to set something for these
+brps[[1]]@availability[] <- 1
+#brps[[1]]@landings.sel[] <- 0.1
+#brps[[1]]@discards.sel[] <- 0
+harvest(brps[[1]]) # OK
+# !!!
+stock.n(brps[[1]]) # Looks bad - why
+# Using lh it works
+spr0(brps[[1]])
+
+brps[[1]] <- brp(brps[[1]])
+harvest(brps[[1]])
+
+
 # Need spr0s of the WG stocks
 # This is the dataframe of the stock details
-dbICES$ypr
-dbICES$ts
-dbICES$ages
-dbICES$pa
-
-# This sets the LH values - weights etc
-# Hack until update constructor, should just be:
-#brps=FLBRPs(dlply(dbICES$ypr, .(wg,stock), FLBRP))
-#brps=FLBRPs(dlply(dbICES$ypr[,], .(wg,stock), function(x) FLBRP(x[,-c(1,2,9,10,15)])))
-brps=FLBRPs(dlply(dbICES$ypr[,], .(stock), function(x) FLBRP(x[,-c(1,2,9,10,15)])))
-# Only keep cod brps
-codBrps <-brps[names(brps) %in% unique(wgcod$stock)]
-
-# Also need to add range info (fbar and plusgroup)  from the $ages data.frame
-#   plusgroup will be final age in the ypr data set
-# And add observed landings etc from $ts
-# And ref points
-
-# Add fbar range
-# Do we have all stocks we need in the $ages df?
-# Turn into method with dataframe as extra argument
-all(unique(wgcod$stock) %in% unique(dbICES$ypr$stock))
-# yes
-# split $ages fbarage into min and max
-test <- strsplit(x = as.character(dbICES$ages$fbarage), split= "-")
-fbars <- cbind(wg = dbICES$ages$wg, stock = dbICES$ages$stock, ldply(strsplit(x = as.character(dbICES$ages$fbarage), split= "-"), function(x) return(data.frame(minfbar = x[1], maxfbar = x[2]))))
-# How to pull out the right one? Lose names of the list
-for (brp in names(codBrps)){
-  range(codBrps[[brp]])[c("minfbar","maxfbar")] <-
-    as.numeric(fbars[fbars$stock == brp, c("minfbar","maxfbar")])
-}
-
-# Add plus group argument to dataframe constructor
-
-# Add observed
-slotNames(codBrps[[1]])
-# data we can add from ts
-#landings.obs
-#rec.obs
-#stock.obs <- biomass.obs (or rename in dataframe)
-#ssb.obs
-#fbar.obs
-for (brp in names(codBrps)){
-  # make an FLQuant of the measure
-  sub <- dbICES$ts[dbICES$ts$stock %in% brp,]
-  #lan <- FLQuant(sub$landings.obs, dimnames = list(year = sub$year))
-  #landings.obs(codBrps[[brp]]) <- lan
-  for (slot in c("landings.obs", "rec.obs", "ssb.obs", "fbar.obs")){
-    flq <- FLQuant(sub[,slot], dimnames = list(year = sub$year))
-    slot(codBrps[[brp]], slot) <- flq
-  }
-  flq <- FLQuant(sub$biomass.obs, dimnames = list(year = sub$year))
-  slot(codBrps[[brp]], "ssb.obs") <- flq
-}
-
-#plot(brp(codBrps[[1]])) # fails due to lack of selectivity
-#brp(codBrps[[1]])
-
-# Set precautionary reference points?
-#If you put fpa in the harvest slot of refpts and leave everything else as na brp will calculate all the other quantities. Ie a check for consistency
+#dbICES$ypr
+#dbICES$ts
+#dbICES$ages
+#dbICES$pa
 #
-dbICES$pa
-refpts(codBrps[[1]])
-for (brp in names(codBrps)){
-  #refpts(codBrps[[brp]])['fpa','harvest']
-  #rbind(refpts(codBrps[[brp]]),NA)
-  # How to add a row to a FLPar?
-}
-
-#vb <- function(t, linf, k, t0 = 0)
-# return(linf * (1 - exp(-k * (t - t0))))
-## age 1 fish =
-#vb(1,132,0.2)
-
-
-# Next
-#add in WG NSea data to dbICES$ypr
-#get more cod stock LH params (not just NSea)
-#more levels of LH info (+ LW, mat etc)
-
-# Get Spr0 from WG (in table already or need to put into BRP)
-# Get Spr0 from LH with increasing LHinfo
-# Compare
-
-# Then turn attention to sel
-
+## This sets the LH values - weights etc
+#brps=FLBRPs(dlply(dbICES$ypr, .(stock), FLBRP))
+#
+## Only keep cod brps
+#codBrps <-brps[names(brps) %in% unique(wgcod$stock)]
+#
+## Also need to add range info (fbar and plusgroup)  from the $ages data.frame
+##   plusgroup will be final age in the ypr data set
+## And add observed landings etc from $ts
+## And ref points
+#
+## Add fbar range
+## Do we have all stocks we need in the $ages df?
+## Turn into method with dataframe as extra argument
+#all(unique(wgcod$stock) %in% unique(dbICES$ypr$stock))
+## yes
+## split $ages fbarage into min and max
+#test <- strsplit(x = as.character(dbICES$ages$fbarage), split= "-")
+#fbars <- cbind(wg = dbICES$ages$wg, stock = dbICES$ages$stock, ldply(strsplit(x = as.character(dbICES$ages$fbarage), split= "-"), function(x) return(data.frame(minfbar = x[1], maxfbar = x[2]))))
+## How to pull out the right one? Lose names of the list
+#for (brp in names(codBrps)){
+#  range(codBrps[[brp]])[c("minfbar","maxfbar")] <-
+#    as.numeric(fbars[fbars$stock == brp, c("minfbar","maxfbar")])
+#}
+#
+## Add plus group argument to dataframe constructor
+#
+## Add observed
+#slotNames(codBrps[[1]])
+## data we can add from ts
+##landings.obs
+##rec.obs
+##stock.obs <- biomass.obs (or rename in dataframe)
+##ssb.obs
+##fbar.obs
+#for (brp in names(codBrps)){
+#  # make an FLQuant of the measure
+#  sub <- dbICES$ts[dbICES$ts$stock %in% brp,]
+#  #lan <- FLQuant(sub$landings.obs, dimnames = list(year = sub$year))
+#  #landings.obs(codBrps[[brp]]) <- lan
+#  for (slot in c("landings.obs", "rec.obs", "ssb.obs", "fbar.obs")){
+#    flq <- FLQuant(sub[,slot], dimnames = list(year = sub$year))
+#    slot(codBrps[[brp]], slot) <- flq
+#  }
+#  flq <- FLQuant(sub$biomass.obs, dimnames = list(year = sub$year))
+#  slot(codBrps[[brp]], "ssb.obs") <- flq
+#}
+#
+##plot(brp(codBrps[[1]])) # fails due to lack of selectivity
+##brp(codBrps[[1]])
+#
+## Set precautionary reference points?
+##If you put fpa in the harvest slot of refpts and leave everything else as na brp will calculate all the other quantities. Ie a check for consistency
+##
+#dbICES$pa
+#refpts(codBrps[[1]])
+#for (brp in names(codBrps)){
+#  #refpts(codBrps[[brp]])['fpa','harvest']
+#  #rbind(refpts(codBrps[[brp]]),NA)
+#  # How to add a row to a FLPar?
+#}
+#
+##vb <- function(t, linf, k, t0 = 0)
+## return(linf * (1 - exp(-k * (t - t0))))
+### age 1 fish =
+##vb(1,132,0.2)
+#
+#
+## Next
+##add in WG NSea data to dbICES$ypr
+##get more cod stock LH params (not just NSea)
+##more levels of LH info (+ LW, mat etc)
+#
+## Get Spr0 from WG (in table already or need to put into BRP)
+## Get Spr0 from LH with increasing LHinfo
+## Compare
+#
+## Then turn attention to sel
+#
+#
