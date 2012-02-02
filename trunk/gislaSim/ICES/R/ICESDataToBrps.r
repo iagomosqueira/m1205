@@ -11,7 +11,7 @@ brps=FLBRPs(dlply(dbICES$ypr, .(stock), FLBRP))
 # SET AVAILABILITY OF EVERYTHING TO 1
 brps <- llply(brps, function(x) {x@availability[] <- 1; return(x)})
 
-test <- lapply(brps, function(x) spr0(x))
+#test <- lapply(brps, function(x) spr0(x))
 
 # Or do it long hand
 #sub <- dbICES$ypr[dbICES$ypr$stock == 'cod-arct',]
@@ -59,15 +59,47 @@ test <- lapply(brps, function(x) spr0(x))
 # Does landings.sel affect it?
 
 # Only keep cod brps
-codBrps <-brps[names(brps) %in% unique(wgcod$stock)]
+#codBrps <-brps[names(brps) %in% unique(wgcod$stock)]
 
+# Why are those spr0s so different low? Maturity
+#laply(codBrps, function(x) spr0(x))
+#laply(codLHs, function(x) spr0(x))
+#
+#stock.n(codBrps[[1]])
+#stock.n(codLHs[[1]])
+#
+#b1 <- codBrps[[1]]
+#sweep(stock.n(b1),c(1,3:6),stock.wt(b1) * mat(b1),"*")# * exp(- harvest(b1)*harvest.spwn(b1) - m(b1) * m.spwn(b1))
+## spawners (i.e. ssb) # First 'year#, F = 0 / rec at f = 0
+#apply(sweep(stock.n(b1),c(1,3:6),stock.wt(b1) * mat(b1),"*"),2:6,sum)
+#stock.n(b1)[1,1]
+#apply(sweep(stock.n(b1),c(1,3:6),stock.wt(b1) * mat(b1),"*"),2:6,sum)[1,1] / stock.n(b1)[1,1]
+#spr0(b1)
+#
+#l1 <- codLHs[[1]]
+#apply(sweep(stock.n(l1),c(1,3:6),stock.wt(l1) * mat(l1),"*"),2:6,sum)
+#apply(sweep(stock.n(l1),c(1,3:6),stock.wt(l1) * mat(l1),"*"),2:6,sum)[1,1] / stock.n(l1)[1,1]
+#spr0(l1)
+#
+#range(l1)
+#
 # 2)
 # Set the fbar range
 # split $ages fbarage into min and max
 # Make a DF of min and max fbar
 dbICES$ages <- cbind(dbICES$ages,
                ldply(strsplit(x = as.character(dbICES$ages$fbarage), split= "-"),
-                  function(x) return(data.frame(minfbar = x[1], maxfbar = x[2]))))
+                  #function(x) return(data.frame(minfbar = x[1], maxfbar = x[2]))))
+                  # Use a regular expression to only include numbers
+                  function(x) return(data.frame(minfbar = as.numeric(sub("[^0-9]","",x[1])),
+                                                maxfbar = as.numeric(sub("[^0-9]","",x[2]))))))
+# Some of these have a , in them
+# Split and keep only numbers
+#x <- strsplit(as.character(dbICES$ages[31,"fbarage"]), split = "-")[[1]]
+#sub("[^0-9]","",x[2])
+
+# check hat minF < maxF
+#all(dbICES$ages$minfbar < dbICES$ages$maxfbar)
 
 # This is very hacky
 for (brp in names(brps)){
@@ -76,9 +108,13 @@ for (brp in names(brps)){
       as.numeric(dbICES$ages[dbICES$ages$stock == brp, c("minfbar","maxfbar")])
   }
 }
+# Again check
+#all(laply(brps, function(x) range(x)["minfbar"] < range(x)["maxfbar"]))
+
+#codBrps <-brps[names(brps) %in% unique(wgcod$stock)]
 
 # 3)
-# Add observed data
+# Add observed data from ts DF
 # data we can add from ts
 #   landings.obs
 #   rec.obs
@@ -108,4 +144,4 @@ for (brp in names(brps)){
 # need to add another row to refpts
 
 
-# save(brps, file = "M:/Projects/MF1205/m1205/gislaSim/ICES/R/wgBrps.Rdata")
+#save(brps, file = "M:/Projects/MF1205/m1205/gislaSim/ICES/data/wgBrps.Rdata")
