@@ -54,6 +54,10 @@ p <- ggplot(wgdata) + geom_point(aes(x = age, y = value, group = stock, colour =
 # No Selectivity or Virgin Biomass
 # Only Spr0 refpt comparison
 
+# Null hypothesis on maturity is that it is knifedge - i.e. without further knowledge
+# length at first maturity = length50 = length at 100% maturity
+# With more info can add ogive shape
+
 # Just focus on cod for the moment
 wgcod <- wgdata[wgdata$species == "cod",]
 wgcod$stock <- factor(wgcod$stock)
@@ -64,47 +68,100 @@ p <- ggplot(wgcod) + geom_point(aes(x = age, y = value, group = stock, colour = 
 
 # Add Linf, K and mat(?) for each stock
 # Just make them all the same as NS cod at the moment
+# These values are from Sophy McCully email 24/01/12
 age <- 1:30
 NScod_linf <- 132
 NScod_k <- 0.2
+NScod_t0 <- 0
+NScod_a <- 0.00653
+NScod_b <- 3.097
+Lmat_gis_dem <- 0.64 * NScod_linf ^ 0.95
+NScod_lmat_wright <- 62.1 # Peter Wright paper Southern North Sea, 2011
+
+lh1 <- FLPar(linf = NScod_linf)
+lh2 <- FLPar(linf = NScod_linf, k = NScod_k)
+lh3 <- FLPar(linf = NScod_linf, k = NScod_k, a = NScod_a, b = NScod_b)
+
+# Life history parameter schedules
+# 1. Linf, Gislason mort, FB mat knifeedge
+# 2. Linf, k, Gislason mort, FB mat knifeedge
+# 3. Linf, k, a, b, Gislason mort, FB mat knifeedge
+# 4. Linf, Gislason mort, Gislason mat knifeedge
+# 5. Linf, k, Gislason mort, Gislason mat knifeedge
+# 6. Linf, k, a, b, Gislason mort, Gislason mat knifeedge
+# 7. Linf, k, a, b, Gislason mort, Wright mat knifeedge
+
 
 # Use gislason natural mortality function
 # Bug with M.R at the moment so need to copy and paste in directly
-#mFn("gislason", par, data)
+# mFn("gislason", par, data)
 # But data is length and that is calculated internally
 # Inside lh() m. mFn dispatches with T we don't have that - interface problem
 # From Table 1, Gislason 2010 - no T but needs to be included in interface at the moment
 Gislason_model2 <- function(par,len, T) exp(0.55 - 1.61*log(len) + 1.44*log(par["linf"]) + log(par["k"]))
 
 # LH with just Linf
-# Gives warning message - ignore for now
 # Where does default value of k come from?
 # FLPar("k"=exp(0.5236+c(log(par["linf"]))*-0.4540))
-NScodpar1 <- gislasim(FLPar(linf = NScod_linf))
-#NScodLH1 <- lh(NScodpar1, age = age)
-#NScodLH1 <- lh(NScodpar1, mFn = Gislason_model2, age = age)
+NScodpar1 <- gislasim(lh1)
 
 # LH with Linf and K
-NScodpar2 <- gislasim(FLPar(linf = NScod_linf, k = NScod_k))
-#NScodLH2 <- lh(NScodpar2, mFn = Gislason_model2, age = age)
-# Split L-W relationship default into gadoid, demersal etc
+NScodpar2 <- gislasim(lh2)
+# Split L-W relationship default into gadoid, demersal etc?
 # e.g. for cod is it a = 0.01 or a = 0.001
 
 # LH with Linf, K and a-b (L-W)
 # Check these values!
-NScodpar3 <- gislasim(FLPar(linf = NScod_linf, k = NScod_k, a = 0.00653, b = 3.097))
-#NScodLH3 <- lh(NScodpar3, mFn = Gislason_model2, age = age)
+NScodpar3 <- gislasim(lh3)
+
 
 # LH with Linf, K and a-b (L-W) - add maturity
 #NScodpar4 <- gislasim(FLPar(linf = NScod_linf, k = NScod_k, a = 0.0653, b = 3.097))
 #NScodLH4 <- lh(NScodpar4, mFn = Gislason_model2, age = age)
+# maturity by default is modelled using a logistic
+# But logistic as function of age
+# Uses a50 and ato95
+# However, these are set using length, i.e. length at a50
+# a50 = 0.8776 Linf - 0.038
+# ato95 = 0
+# These are lengths
+# Then convert to age using invVB
+# Then logistic function
+# Gislason 2008 uses Lmat - length at first maturity: Lmat = q Linf ^ s, for pelagic, demersal and combined
+# http://www.fishbase.org/manual/FishbaseThe_MATURITY_Table.htm
+# Froese and Binohlan (2000) have likewise demonstrated that size and age at sexual maturity are strongly correlated with growth, maximum size and longevity.
+# The default Lmat is from Fishbase (http://www.fishbase.org/manual/FishbaseThe_MATURITY_Table.htm)
+# Lmat = 0.8776 * Linf - 0.038
+# Alternatives are from Gislason 2008
+# Lmat = 0.72 Linf ^ 0.93 (all NS species)
+# Lmat = 0.64 Linf ^ 0.95 (demersal)
+# Lmat = 5.10 Linf ^ 0.41 (pelagic)
+# Use the Gislason 2008 relationship for Lmat
+# Gislason all
+#Lmat_all <- 0.72 * NScod_linf ^ 0.93
+#Lmat_dem <- 0.64 * NScod_linf ^ 0.95
+#a50_all <- invVonB(FLPar(linf = NScod_linf, k = NScod_k, t0 = NScod_t0),Lmat_all)
+#a50_dem <- invVonB(FLPar(linf = NScod_linf, k = NScod_k, t0 = NScod_t0),Lmat_gis_dem)
+NScodpar4 <- gislasim(FLPar(lh1))
+NScodpar4["a50"] <- invVonB(NScodpar4,Lmat_gis_dem)
+# ato95 = 0 gives a knife edge to maturity
+# ato95 is number of years past a50 that 95% are mature.
+# e.g if a50 = 10, then 50% of individuals are mature, if ato95 = 5, then at age 15 95% are mature
+NScodpar5 <- gislasim(FLPar(lh2))
+NScodpar5["a50"] <- invVonB(NScodpar5,Lmat_gis_dem)
+NScodpar6 <- gislasim(FLPar(lh3))
+NScodpar6["a50"] <- invVonB(NScodpar6,Lmat_gis_dem)
+
+# Use Peter Wright's maturity value (2011)
+NScodpar7 <- gislasim(FLPar(lh3))
+NScodpar7["a50"] <- invVonB(NScodpar6,NScod_lmat_wright)
 
 
 # Put all measures of interest into dataframe for plotting
 # Watch units of stock.wt - should come out as kg
 pullOutMeasures <- function(brp){
   dat <- rbind(
-               cbind(variable = "stock.wt", as.data.frame(stock.wt(brp)/1000)),
+               cbind(variable = "stock.wt", as.data.frame(stock.wt(brp))),
                cbind(variable = "m", as.data.frame(m(brp))),
                cbind(variable = "mat", as.data.frame(mat(brp)))
               )
@@ -114,118 +171,69 @@ pullOutMeasures <- function(brp){
 }
 
 # Put all together
-NScodpars <- list(lh1 = NScodpar1, lh2 = NScodpar2, lh3 = NScodpar3)
+NScodpars <- list(lh1 = NScodpar1, lh2 = NScodpar2, lh3 = NScodpar3,
+                  lh4 = NScodpar4, lh5 = NScodpar5, lh6 = NScodpar6,
+                  lh7 = NScodpar7)
 codLHs <- llply(NScodpars, lh, mFn = Gislason_model2, age = age)
 codLHsdat <- ldply(codLHs, pullOutMeasures)
 
 # Plot against the WG cod data
 p <- ggplot(wgcod) + geom_point(aes(x=age, y = value, colour = stock)) +
+                      geom_line(aes(x=age, y = value, colour = stock), linetype=2) +
                      facet_wrap(~variable, scales = "free")
-# Add in the LH stocks
-p <- p + geom_line(aes(x=age, y = data, group = .id, colour = .id), data = codLHsdat)
+                     
+# Add in the LH stocks - change size (outside of aes() because we are not mapping size to variable
+# but setting it for the layer
+#p <- p + geom_line(aes(x=age, y = data, group = .id, colour = .id), size = 1, data = codLHsdat)
+# Add a bit of jitter
+p <- p + geom_line(aes(x=age, y = data, group = .id, colour = .id), size = 1, data = codLHsdat,
+                    position = position_jitter(width = 0.2))
+# Trim it down to 15yrs
+p + scale_x_continuous(limits = c(0, 15))
+
+
+
+plot(codLHs[[1]])
+
+# can't see the difference between maturity changes because mat knife edge and happens at age 3
+
 
 #*******************************************************************************
 # Make BRPS of the ICES stocks
 # See ICESDataToBrps
 #source("M:/Projects/MF1205/m1205/gislaSim/ICES/R/ICESDataToBrps.r")
-load("M:/Projects/MF1205/m1205/gislaSim/ICES/R/wgBrps.Rdata")
+load("M:/Projects/MF1205/m1205/gislaSim/ICES/data/wgBrps.Rdata")
 # They are all in brps - 39 of them
 length(brps)
 
+# Get the cod stocks
+codBrps <-brps[names(brps) %in% unique(wgcod$stock)]
 
+# spr0 - spawners per recruit at zero fishing
+# i.e. SSB / Rec at F = 0
+# unaffected by SRR or fishing
+
+# spr0 of all WG stocks
+llply(brps, spr0)
+# spr0 of WG Cod stocks
+llply(codBrps, spr0)
 # spr0 of my new stocks
 llply(codLHs, spr0)
 
-spr0(brps[[1]])
-spr0(codLHs[[1]])
-# this works too
-plot(codLHs[[1]])
-# But not for brps
-#llply(brps, spr0)
+# Table these up
+codSpr0s <- rbind(
+  ldply(codBrps, function(x) data.frame(spr0 = c(spr0(x)))),
+  ldply(codLHs, function(x) data.frame(spr0 = c(spr0(x))))
+)
 
-# Need to set something for these
-brps[[1]]@availability[] <- 1
-#brps[[1]]@landings.sel[] <- 0.1
-#brps[[1]]@discards.sel[] <- 0
-harvest(brps[[1]]) # OK
-# !!!
-stock.n(brps[[1]]) # Looks bad - why
-# Using lh it works
-spr0(brps[[1]])
-
-brps[[1]] <- brp(brps[[1]])
-harvest(brps[[1]])
+# Difference will be caused by natural mortality
+# LH m is much higher on earlier life
 
 
-# Need spr0s of the WG stocks
-# This is the dataframe of the stock details
-#dbICES$ypr
-#dbICES$ts
-#dbICES$ages
-#dbICES$pa
-#
-## This sets the LH values - weights etc
-#brps=FLBRPs(dlply(dbICES$ypr, .(stock), FLBRP))
-#
-## Only keep cod brps
-#codBrps <-brps[names(brps) %in% unique(wgcod$stock)]
-#
-## Also need to add range info (fbar and plusgroup)  from the $ages data.frame
-##   plusgroup will be final age in the ypr data set
-## And add observed landings etc from $ts
-## And ref points
-#
-## Add fbar range
-## Do we have all stocks we need in the $ages df?
-## Turn into method with dataframe as extra argument
-#all(unique(wgcod$stock) %in% unique(dbICES$ypr$stock))
-## yes
-## split $ages fbarage into min and max
-#test <- strsplit(x = as.character(dbICES$ages$fbarage), split= "-")
-#fbars <- cbind(wg = dbICES$ages$wg, stock = dbICES$ages$stock, ldply(strsplit(x = as.character(dbICES$ages$fbarage), split= "-"), function(x) return(data.frame(minfbar = x[1], maxfbar = x[2]))))
-## How to pull out the right one? Lose names of the list
-#for (brp in names(codBrps)){
-#  range(codBrps[[brp]])[c("minfbar","maxfbar")] <-
-#    as.numeric(fbars[fbars$stock == brp, c("minfbar","maxfbar")])
-#}
-#
-## Add plus group argument to dataframe constructor
-#
-## Add observed
-#slotNames(codBrps[[1]])
-## data we can add from ts
-##landings.obs
-##rec.obs
-##stock.obs <- biomass.obs (or rename in dataframe)
-##ssb.obs
-##fbar.obs
-#for (brp in names(codBrps)){
-#  # make an FLQuant of the measure
-#  sub <- dbICES$ts[dbICES$ts$stock %in% brp,]
-#  #lan <- FLQuant(sub$landings.obs, dimnames = list(year = sub$year))
-#  #landings.obs(codBrps[[brp]]) <- lan
-#  for (slot in c("landings.obs", "rec.obs", "ssb.obs", "fbar.obs")){
-#    flq <- FLQuant(sub[,slot], dimnames = list(year = sub$year))
-#    slot(codBrps[[brp]], slot) <- flq
-#  }
-#  flq <- FLQuant(sub$biomass.obs, dimnames = list(year = sub$year))
-#  slot(codBrps[[brp]], "ssb.obs") <- flq
-#}
-#
-##plot(brp(codBrps[[1]])) # fails due to lack of selectivity
-##brp(codBrps[[1]])
-#
-## Set precautionary reference points?
-##If you put fpa in the harvest slot of refpts and leave everything else as na brp will calculate all the other quantities. Ie a check for consistency
-##
-#dbICES$pa
-#refpts(codBrps[[1]])
-#for (brp in names(codBrps)){
-#  #refpts(codBrps[[brp]])['fpa','harvest']
-#  #rbind(refpts(codBrps[[brp]]),NA)
-#  # How to add a row to a FLPar?
-#}
-#
+#*******************************************************************************
+
+
+
 ##vb <- function(t, linf, k, t0 = 0)
 ## return(linf * (1 - exp(-k * (t - t0))))
 ### age 1 fish =
@@ -240,7 +248,18 @@ harvest(brps[[1]])
 ## Get Spr0 from WG (in table already or need to put into BRP)
 ## Get Spr0 from LH with increasing LHinfo
 ## Compare
-#
-## Then turn attention to sel
-#
-#
+
+# Then selectivity
+# For each of the codLHs above, we want to set upto three types of selectivity
+# 1) Flat to the left of maturity
+# 2) Flat to the right of maturity
+# 3) Dome
+
+# Do this for each codLH and for codWG too?
+# I guess for comparison we have to
+
+# ATM we have 7 LH cods
+# Blow this up to 21? Sure
+# Same for WG cods
+
+#*******************************************************************************
