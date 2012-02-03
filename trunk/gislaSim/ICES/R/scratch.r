@@ -1,15 +1,15 @@
 rm(list=ls())
 library(FLAdvice)
-#setwd("C:/Projects/m1205/gislaSim/ICES")
-#source("C:/Sandbox/pkg/FLAdvice/R/lh.R")
-#source("C:/Sandbox/pkg/FLAdvice/R/M.R")
-#source("C:/Sandbox/pkg/FLAdvice/R/growth.R")
-#
-setwd("m:/Projects/MF1205/m1205/gislaSim/ICES")
-source("m:/Sandbox/flr/pkg/FLAdvice/R/lh.R")
-source("m:/Sandbox/flr/pkg/FLAdvice/R/M.R")
-source("m:/Sandbox/flr/pkg/FLAdvice/R/growth.R")
+setwd("C:/Projects/m1205/gislaSim/ICES")
+source("C:/Sandbox/pkg/FLAdvice/R/lh.R")
+source("C:/Sandbox/pkg/FLAdvice/R/M.R")
+source("C:/Sandbox/pkg/FLAdvice/R/growth.R")
 
+#setwd("m:/Projects/MF1205/m1205/gislaSim/ICES")
+#source("m:/Sandbox/flr/pkg/FLAdvice/R/lh.R")
+#source("m:/Sandbox/flr/pkg/FLAdvice/R/M.R")
+#source("m:/Sandbox/flr/pkg/FLAdvice/R/growth.R")
+#
 #*******************************************************************************
 # Loading and looking at the ICES data
 load("data/dbICES.RData")
@@ -185,7 +185,7 @@ p <- ggplot(wgcod) + geom_point(aes(x=age, y = value, colour = stock)) +
 # Add in the LH stocks - change size (outside of aes() because we are not mapping size to variable
 # but setting it for the layer
 #p <- p + geom_line(aes(x=age, y = data, group = .id, colour = .id), size = 1, data = codLHsdat)
-# Add a bit of jitter
+# Add a bit of jitter because maturity happens at the same place
 p <- p + geom_line(aes(x=age, y = data, group = .id, colour = .id), size = 1, data = codLHsdat,
                     position = position_jitter(width = 0.2))
 # Trim it down to 15yrs
@@ -193,16 +193,19 @@ p + scale_x_continuous(limits = c(0, 15))
 
 
 
-plot(codLHs[[1]])
+#plot(codLHs[[1]])
 
-# can't see the difference between maturity changes because mat knife edge and happens at age 3
+
 
 
 #*******************************************************************************
 # Make BRPS of the ICES stocks
 # See ICESDataToBrps
 #source("M:/Projects/MF1205/m1205/gislaSim/ICES/R/ICESDataToBrps.r")
-load("M:/Projects/MF1205/m1205/gislaSim/ICES/data/wgBrps.Rdata")
+#source("c:/Projects/m1205/gislaSim/ICES/R/ICESDataToBrps.r")
+#load("M:/Projects/MF1205/m1205/gislaSim/ICES/data/wgBrps.Rdata")
+load("c:/Projects/m1205/gislaSim/ICES/data/wgBrps.Rdata")
+
 # They are all in brps - 39 of them
 length(brps)
 
@@ -231,6 +234,193 @@ codSpr0s <- rbind(
 
 
 #*******************************************************************************
+# Set three selectivities
+# Flat to the left of maturity
+# Flat to the right of maturity
+# Dome shaped
+
+# Use dnormal with these parameters:
+# selLeft <- FLParam(a1 = amat - 1, sl = 0.1, sr = 1e6)
+# selRight <- FLParam(a1 = amat + 1, sl = 0.1, sr = 1e6)
+# selDome <- FLParam(a1 = amat - 1, sl = 0.1, sr = 0.2)
+
+clh <- codLHs[[1]]
+#NScodpars <- list(lh1 = NScodpar1, lh2 = NScodpar2, lh3 = NScodpar3,
+#                  lh4 = NScodpar4, lh5 = NScodpar5, lh6 = NScodpar6,
+#                  lh7 = NScodpar7)
+#
+
+lh1 <- NScodpars[[1]]
+
+makeSelsLH <- function(lhPars,age)
+{
+  selLeftPars <- FLPar(a1 = floor(lhPars["a50"]) - 1, sl = 0.5, sr = 1e6)
+  selRightPars <- FLPar(a1 = floor(lhPars["a50"]) + 1, sl = 0.5, sr = 1e6)
+  selDomePars <- FLPar(a1 = floor(lhPars["a50"]) - 1, sl = 0.5, sr = 5)
+  
+  selLeft <- dnormal(selLeftPars,age)
+  selRight <- dnormal(selRightPars,age)
+  selDome <- dnormal(selDomePars,age)
+  
+  return(list(selLeft = selLeft, selRight = selRight, selDome = selDome))
+}
+
+sels <- makeSelsLH(lh1,age)
+selDF <- cbind(age = rep(age,3),melt(sels))
+ggplot(selDF) + geom_line(aes(x = age, y = value, group = L1, colour = L1))
+
+
+NScodpars <- list(lh1 = NScodpar1, lh2 = NScodpar2, lh3 = NScodpar3,
+                  lh4 = NScodpar4, lh5 = NScodpar5, lh6 = NScodpar6,
+                  lh7 = NScodpar7)
+                  
+# Make more NScodpars with sels
+# For non cod stocks might want to pass the age shift and SD on age
+# structure
+# Also maturity ogive?
+#addSelsToLH <- function(lhPar)
+#{
+#  leftSel <- lhPar
+#  leftSel[c("a1","sl","sr")] <- c(floor(lhPar["a50"]) - 1, 0.5, 1e6)
+#  rightSel <- lhPar
+#  rightSel[c("a1","sl","sr")] <- c(floor(lhPar["a50"]) + 1, 0.5, 1e6)
+#  domeSel <- lhPar
+#  domeSel[c("a1","sl","sr")] <- c(floor(lhPar["a50"]) - 1, 0.5, 5)
+#  return(list(leftSel = leftSel, rightSel = rightSel, domeSel = domeSel))
+#}
+#
+#test <- addSelsToLH(NScodpars[[1]])
+#test <- llply(NScodpars, addSelsToLH)
+#t2 <- unlist(lapply(test, unlist))
+#
+
+NSCodParsSel <- list()
+for (i in 1:length(NScodpars))
+{
+  leftSel <- NScodpars[[i]]
+  leftSel[c("a1","sl","sr")] <- c(floor(NScodpars[[i]]["a50"]) - 1, 0.5, 1e6)
+  rightSel <- NScodpars[[i]]
+  rightSel[c("a1","sl","sr")] <- c(floor(NScodpars[[i]]["a50"]) + 3, 0.5, 1e6)
+  domeSel <- NScodpars[[i]]
+  domeSel[c("a1","sl","sr")] <- c(floor(NScodpars[[i]]["a50"]) - 1, 0.5, 5)
+  NSCodParsSel[[paste(names(NScodpars)[i],"leftSel",sep="_")]] <- leftSel
+  NSCodParsSel[[paste(names(NScodpars)[i],"rightSel",sep="_")]] <- rightSel
+  NSCodParsSel[[paste(names(NScodpars)[i],"domeSel",sep="_")]] <- domeSel
+}
+
+codLHsSel <- llply(NSCodParsSel, lh, mFn = Gislason_model2, age = age)
+codLHsSelDat <- ldply(codLHsSel, pullOutMeasures)
+
+
+# Plot these up to have a look - each block of three is the same
+p <- ggplot(wgcod) + geom_point(aes(x=age, y = value, colour = stock)) +
+                      geom_line(aes(x=age, y = value, colour = stock), linetype=2) +
+                     facet_wrap(~variable, scales = "free")
+
+# Add in the LH stocks - change size (outside of aes() because we are not mapping size to variable
+# but setting it for the layer
+#p <- p + geom_line(aes(x=age, y = data, group = .id, colour = .id), size = 1, data = codLHsdat)
+# Add a bit of jitter because maturity happens at the same place
+p <- p + geom_line(aes(x=age, y = data, group = .id, colour = .id), size = 1, data = codLHsSelDat,
+                    position = position_jitter(width = 0.2))
+# Trim it down to 15yrs
+p + scale_x_continuous(limits = c(0, 15))
+
+#refpts(codLHsSel[[1]])
+
+# Get spr0, f.01, fmax
+getSpr0F01Fmax <- function(brp){
+  f0.1 <- c(refpts(brp)["f0.1","harvest"])
+  fmax <- c(refpts(brp)["fmax","harvest"])
+  spr0 <- c(spr0(brp))
+  return(data.frame(spr0 = spr0, f0.1 = f0.1, fmax = fmax))
+}
+
+fRefPtsLH <- ldply(codLHsSel, getSpr0F01Fmax)
+
+# Plot maturity and selectivity for each brp
+
+# Make a df so we can put three sels and a mat on each plot
+getMatSel <- function(brp){
+  df <- rbind(
+    cbind(measure = "mat", as.data.frame(mat(brp))),
+    cbind(measure = "sel", as.data.frame(landings.sel(brp)/ c(max(landings.sel(brp)))))
+  )
+  # remove unwanted columns
+  df <- df[,c(1, 2, 8)]
+  return(df)
+}
+
+LHMatSelDf <- ldply(codLHsSel, getMatSel)
+LHMatSelDf <- cbind(LHMatSelDf, ldply(strsplit(LHMatSelDf$.id, "_"), function(x) return(data.frame(lh = x[1], sel = x[2]))))
+
+p <- ggplot(LHMatSelDf) + geom_line(aes(x = age, y = data, group = measure, colour = measure)) +
+  facet_grid(sel ~ lh, scales = "free") +
+  scale_x_continuous(lim = c(0,15))
+# Woohoo!
+
+# Now do the same for the WG data
+NSCodParsSelWG <- list()
+for (i in 1:length(codBrps))
+{
+  # Need to get equivalent of a50 from WG data
+  # smallest age with mat > 0.5
+  age <- as.numeric(dimnames(landings.sel(codBrps[[i]]))$age)
+  a50 <- age[min(which(mat(codBrps[[i]]) >= 0.5))]
+  leftSel <- codBrps[[i]]
+  leftSelParams <- FLPar("a1" = a50 -1, "sl" = 0.5, "sr" = 1e6)
+  landings.sel(leftSel)[] <- dnormal(leftSelParams, age)
+
+  rightSel <- codBrps[[i]]
+  rightSelParams <- FLPar("a1" = a50 +3, "sl" = 0.5, "sr" = 1e6)
+  landings.sel(rightSel)[] <- dnormal(rightSelParams, age)
+
+  domeSel <- codBrps[[i]]
+  domeSelParams <- FLPar("a1" = a50 -1, "sl" = 0.5, "sr" = 5)
+  landings.sel(domeSel)[] <- dnormal(domeSelParams, age)
+
+  NSCodParsSelWG[[paste(names(codBrps)[i],"leftSel",sep="_")]] <- brp(leftSel)
+  NSCodParsSelWG[[paste(names(codBrps)[i],"rightSel",sep="_")]] <- brp(rightSel)
+  NSCodParsSelWG[[paste(names(codBrps)[i],"domeSel",sep="_")]] <- brp(domeSel)
+}
+
+# calling brp changes the landings.sel???
+# F = Fbar * sel
+# Mean selectivity over the Fbar range is 1
+
+
+# Can we plot the sels and mats?
+WGMatSelDf <- ldply(NSCodParsSelWG, getMatSel)
+WGMatSelDf <- cbind(WGMatSelDf, ldply(strsplit(WGMatSelDf$.id, "_"), function(x) return(data.frame(lh = x[1], sel = x[2]))))
+
+p <- ggplot(WGMatSelDf) + geom_line(aes(x = age, y = data, group = measure, colour = measure)) +
+  facet_grid(sel ~ lh, scales = "free") +
+  scale_x_continuous(lim = c(0,15))
+
+
+# Get ref pts
+fRefPtsLH <- ldply(codLHsSel, getSpr0F01Fmax)
+fRefPtsWG <- ldply(NSCodParsSelWG, getSpr0F01Fmax)
+
+# Look at hists based on selectivity
+fRefPts <- rbind(
+            cbind(group = "LH", fRefPtsLH),
+            cbind(group = "WG", fRefPtsWG)
+            )
+fRefPts <- cbind(fRefPts, ldply(strsplit(fRefPts$.id, "_"), function(x) return(data.frame(lh = x[1], sel = x[2]))))
+fRefPtsDf <- melt(fRefPts, measure.vars = c("spr0", "f0.1", "fmax"))
+
+# compare the spread of the refpoints
+p <- ggplot(fRefPtsDf) + geom_boxplot(aes(x = group, y = value)) +
+  facet_grid(variable ~ sel, scales= "free")
+
+# Need to check that the right side selectivity is suitable for comparison
+#*******************************************************************************
+# For each of these BRPs, make three more with three different SRRs
+# Get MSY and FMSY
+
+#*******************************************************************************
+# M being different is the same as not knowing what value of steepness to use. Who does?
 
 
 
@@ -262,4 +452,15 @@ codSpr0s <- rbind(
 # Blow this up to 21? Sure
 # Same for WG cods
 
+
+
+
 #*******************************************************************************
+
+
+# An aside from Kell
+#codM2=read.table("C:/Projects/gbyp-sam/papers/SCRS/SCRS2012-Lifehistory/data/CodM2.csv",sep=",")[-1,-1]
+#codM2=FLQuant(unlist(c(codM2)),dimnames=list(age=0:11,year=1963:2000))
+#ggplot(codM2)+geom_line(aes(year,data,colour=factor(age)))
+#ggplot(codM2)+geom_line(aes(age,data,colour=factor(year)))
+#
