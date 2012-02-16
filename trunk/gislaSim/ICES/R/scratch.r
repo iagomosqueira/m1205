@@ -1,14 +1,16 @@
 rm(list=ls())
 library(FLAdvice)
-setwd("C:/Projects/m1205/gislaSim/ICES")
-source("C:/Sandbox/pkg/FLAdvice/R/lh.R")
-source("C:/Sandbox/pkg/FLAdvice/R/M.R")
-source("C:/Sandbox/pkg/FLAdvice/R/growth.R")
 
-#setwd("m:/Projects/MF1205/m1205/gislaSim/ICES")
+
+#setwd("c:/Projects/m1205/gislaSim/ICES")
+#source("C:/Sandbox/pkg/FLAdvice/R/lh.R")
+#source("C:/Sandbox/pkg/FLAdvice/R/M.R")
+#source("C:/Sandbox/pkg/FLAdvice/R/growth.R")
+
+setwd("m:/Projects/MF1205/m1205/gislaSim/ICES")
 #source("m:/Sandbox/flr/pkg/FLAdvice/R/lh.R")
 #source("m:/Sandbox/flr/pkg/FLAdvice/R/M.R")
-#source("m:/Sandbox/flr/pkg/FLAdvice/R/growth.R")
+source("m:/Sandbox/flr/pkg/FLAdvice/R/growth.R") # shouldn't have to do this
 #
 #*******************************************************************************
 # Loading and looking at the ICES data
@@ -33,7 +35,7 @@ dbICES$ypr <- cbind(dbICES$ypr, species = laply(strsplit(x = as.character(dbICES
 
 wgdata <- melt(dbICES$ypr, id.vars = c("wg", "stock", "age", "species"))
 
-# Probably want to focus on species that we have more than data set for
+# Probably want to focus on species that we have more data sets for
 nstocks <- ddply(ddply(wgdata, .(stock), summarise, species = unique(species)),
                   .(species), summarise, number = length(species))
 # Maybe just stick to plaice (4), herring (4), cod (7), haddock (6) and sole (7)
@@ -48,8 +50,17 @@ p <- ggplot(wgdata) + geom_point(aes(x = age, y = value, group = stock, colour =
   facet_grid(variable ~ species, scales="free")
 # Can we scale the plot by max - comparing weights between stocks is bad
 
-#*******************************************************************************
+# Just focus on cod for the moment
+species <- "cod"
+wgcod <- wgdata[wgdata$species == species,]
+wgcod$stock <- factor(wgcod$stock)
 
+# Cod in North Sea is not here...
+p <- ggplot(wgcod) + geom_point(aes(x = age, y = value, group = stock, colour = stock)) +
+  facet_wrap(~variable, scales="free")
+
+#*******************************************************************************
+# Cod Generic LH
 # Level one of data poorness.
 # No Selectivity or Virgin Biomass
 # Only Spr0 refpt comparison
@@ -57,14 +68,6 @@ p <- ggplot(wgdata) + geom_point(aes(x = age, y = value, group = stock, colour =
 # Null hypothesis on maturity is that it is knifedge - i.e. without further knowledge
 # length at first maturity = length50 = length at 100% maturity
 # With more info can add ogive shape
-
-# Just focus on cod for the moment
-wgcod <- wgdata[wgdata$species == "cod",]
-wgcod$stock <- factor(wgcod$stock)
-
-# Cod in North Sea is not here...
-p <- ggplot(wgcod) + geom_point(aes(x = age, y = value, group = stock, colour = stock)) +
-  facet_wrap(~variable, scales="free")
 
 # Add Linf, K and mat(?) for each stock
 # Just make them all the same as NS cod at the moment
@@ -75,21 +78,23 @@ NScod_k <- 0.2
 NScod_t0 <- 0
 NScod_a <- 0.00653
 NScod_b <- 3.097
-Lmat_gis_dem <- 0.64 * NScod_linf ^ 0.95
+# Maturity schedules
+Lmat_gis_dem <- 0.64 * NScod_linf ^ 0.95 # Length at maturity from Gislason et al 2008
 NScod_lmat_wright <- 62.1 # Peter Wright paper Southern North Sea, 2011
+
 
 lh1 <- FLPar(linf = NScod_linf)
 lh2 <- FLPar(linf = NScod_linf, k = NScod_k)
 lh3 <- FLPar(linf = NScod_linf, k = NScod_k, a = NScod_a, b = NScod_b)
 
 # Life history parameter schedules
-# 1. Linf, Gislason mort, FB mat knifeedge
-# 2. Linf, k, Gislason mort, FB mat knifeedge
-# 3. Linf, k, a, b, Gislason mort, FB mat knifeedge
-# 4. Linf, Gislason mort, Gislason mat knifeedge
-# 5. Linf, k, Gislason mort, Gislason mat knifeedge
+# 1. Linf,          Gislason mort, Fishbase mat knifeedge
+# 2. Linf, k,       Gislason mort, Fishbase mat knifeedge
+# 3. Linf, k, a, b, Gislason mort, Fishbase mat knifeedge
+# 4. Linf,          Gislason mort, Gislason mat knifeedge
+# 5. Linf, k,       Gislason mort, Gislason mat knifeedge
 # 6. Linf, k, a, b, Gislason mort, Gislason mat knifeedge
-# 7. Linf, k, a, b, Gislason mort, Wright mat knifeedge
+# 7. Linf, k, a, b, Gislason mort, Wright   mat knifeedge
 
 
 # Use gislason natural mortality function
@@ -107,11 +112,10 @@ NScodpar1 <- gislasim(lh1)
 
 # LH with Linf and K
 NScodpar2 <- gislasim(lh2)
-# Split L-W relationship default into gadoid, demersal etc?
+# Split default L-W relationship default into gadoid, demersal etc?
 # e.g. for cod is it a = 0.01 or a = 0.001
 
 # LH with Linf, K and a-b (L-W)
-# Check these values!
 NScodpar3 <- gislasim(lh3)
 
 
@@ -142,6 +146,8 @@ NScodpar3 <- gislasim(lh3)
 #Lmat_dem <- 0.64 * NScod_linf ^ 0.95
 #a50_all <- invVonB(FLPar(linf = NScod_linf, k = NScod_k, t0 = NScod_t0),Lmat_all)
 #a50_dem <- invVonB(FLPar(linf = NScod_linf, k = NScod_k, t0 = NScod_t0),Lmat_gis_dem)
+
+# Set the age at 50% mature based on gislason assumption
 NScodpar4 <- gislasim(FLPar(lh1))
 NScodpar4["a50"] <- invVonB(NScodpar4,Lmat_gis_dem)
 # ato95 = 0 gives a knife edge to maturity
@@ -174,7 +180,9 @@ pullOutMeasures <- function(brp){
 NScodpars <- list(lh1 = NScodpar1, lh2 = NScodpar2, lh3 = NScodpar3,
                   lh4 = NScodpar4, lh5 = NScodpar5, lh6 = NScodpar6,
                   lh7 = NScodpar7)
+# Make the BRP objects
 codLHs <- llply(NScodpars, lh, mFn = Gislason_model2, age = age)
+# Pull out mesures of interest
 codLHsdat <- ldply(codLHs, pullOutMeasures)
 
 # Plot against the WG cod data
@@ -193,18 +201,13 @@ p + scale_x_continuous(limits = c(0, 15))
 
 
 
-#plot(codLHs[[1]])
-
-
-
-
 #*******************************************************************************
 # Make BRPS of the ICES stocks
 # See ICESDataToBrps
 #source("M:/Projects/MF1205/m1205/gislaSim/ICES/R/ICESDataToBrps.r")
 #source("c:/Projects/m1205/gislaSim/ICES/R/ICESDataToBrps.r")
-#load("M:/Projects/MF1205/m1205/gislaSim/ICES/data/wgBrps.Rdata")
-load("c:/Projects/m1205/gislaSim/ICES/data/wgBrps.Rdata")
+load("M:/Projects/MF1205/m1205/gislaSim/ICES/data/wgBrps.Rdata")
+#load("c:/Projects/m1205/gislaSim/ICES/data/wgBrps.Rdata")
 
 # They are all in brps - 39 of them
 length(brps)
