@@ -1,0 +1,52 @@
+species,sex,variant,lmax,linf,k,t0,a,b,l50,lto5,asym
+Greenland shark,MF,1,606,,,,,,,,1
+Thresher shark,MF,1,341,,,,1.88E-04,2.5188,303,,1
+Shortfin mako,MF,1,358,,,,2.81E-06,3.20182,,,1
+Porbeagle shark,MF,1,278,289.4,0.066,-6.06,,,,,1
+Blue shark,MF,1,,287,0.17,-1.43,3.18E-06,3.1313,,,1
+Starry smooth hound,MF,1,150,,,,,,82.5,,1
+Shagreen ray,MF,1,89.5,95,,,,,,,1
+Thornback ray,MF,1,120,139.2,0.09,-2.63,,,,,1
+Spotted ray,MF,1,80,97.8,0.15,-1.72,,,,,1
+Bottlenosed skate ,MF,1,230,,,,,,,,1
+Sting ray,MF,1,140,,,,,,33,,1
+Eagle ray,MF,1,150,,,,,,50,,1
+Shortfin mako,F,1,358,345,0.203,-1,,,285,,
+Porbeagle shark,F,1,278,309.8,0.061,-5.9,0.00003,2.8164,218,,
+Blue shark,F,1,,310,0.13,-1.77,3.18E-06,3.1313,,,
+Spurdog,F,1,128,110.66,,-3.306,1.08E-06,3.301,80,70,
+Angel shark,F,1,244,,,,,,148.5,,
+Lesser-spotted dogfish,F,1,80,,,,,,58.5,,
+Nurse hound,F,1,150,,,,,,79,,
+Tope shark,F,1,200,,,,,,137,,
+Marbled electric ray,F,1,39.5,,,,,,35,,
+Common skate,F,1,150,,,,2.60E-06,3.222,122.9,,
+Shagreen ray,F,1,89.5,,,,3.60E-06,3.075,,,
+Cuckoo ray,F,1,71,73.1,0.23,-2.47,3.50E-06,3.147,59.4,45,
+Blonde ray,F,1,125,118.4,0.19,-0.8,2.60E-06,3.271,83.4,60,
+Thornback ray,F,1,120,107,0.13,-0.6,3.70E-06,3.148,76.6,47,
+Small-eyed ray,F,1,86,,,,2.80E-06,3.248,77.9,73,
+Spotted ray,F,1,80,72.8,0.18,-0.37,3.10E-06,3.194,62.5,49,
+Undulate ray,F,1,100,110,,,4.30E-06,3.112,,80,
+Sting ray,F,1,140,,,,,,38,,
+Eagle ray,F,1,150,,,,,,60,,
+Shortfin mako,M,1,267,302,0.266,-1,,,210,195,
+Porbeagle shark,M,1,253,257.7,0.08,-5.78,0.00005,2.729,174,,
+Blue shark,M,1,,282,0.18,-1.35,3.18E-06,3.1313,201,,
+Spurdog,M,1,128,81.36,0.11,-2.166,5.76E-06,2.89,64,,
+Angel shark,M,1,244,,,,,,106,,
+Lesser-spotted dogfish,M,1,80,,,,,,52,,
+Nurse hound,M,1,150,,,,,,77,,
+Tope shark,M,1,200,,,,,,127.5,,
+Marbled electric ray,M,1,38.6,,,,,,25,,
+Sandy ray,M,1,120,,,,,,75,,1
+Common skate,M,1,150,,,,4.10E-06,3.123,115,,
+Shagreen ray,M,1,89.5,,,,1.40E-06,3.317,,75,
+Cuckoo ray,M,1,71,69.9,0.33,-1.12,4.10E-06,3.105,56.4,48,
+Blonde ray,M,1,125,115,0.19,-0.8,2.70E-06,3.256,78,55,
+Thornback ray,M,1,120,85.6,0.21,-0.6,4.60E-06,3.082,66.6,47,
+Small-eyed ray,M,1,86,,,,3.20E-06,3.195,68.9,66,
+Spotted ray,M,1,80,68.7,0.19,-0.56,4.20E-06,3.1,50.9,40,
+Undulate ray,M,1,100,110,,,3.50E-06,3.162,82.3,75,
+Sting ray,M,1,140,,,,,,28,,
+Eagle ray,M,1,150,,,,,,40,,

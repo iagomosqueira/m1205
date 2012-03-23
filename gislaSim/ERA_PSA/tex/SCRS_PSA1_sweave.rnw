@@ -1,3 +1,12 @@
+% setwd("C:/Projects/m1205/gislaSim/ERA_PSA/tex")
+% Sweave("SCRS_PSA1_sweave.rnw", syntax="SweaveSyntaxNoweb")
+% pdflatex SCRS_PSA1_sweave.tex
+
+%--------------------------------------------------------------------------------------
+% Header Guff
+%--------------------------------------------------------------------------------------
+
+
 % $Id: $
 \documentclass[a4paper, 10pt]{article}
 % reduced margins
@@ -121,7 +130,8 @@ escapeinside={\%*}{*)}, % if you want to add a comment within your code
 morekeywords={*,...} % if you want to add more keywords to the set
 }
 
-%
+%--------------------------------------------------------------------------------------
+
 \title{Estimating reference points for elasmobranchs using life history theory.}
 %
 \author{
@@ -133,7 +143,7 @@ Sophy McCully\footnote{Cefas, Lowestoft, UK; ~sophy.mccully@cefas.co.uk;}\\
 \date{}
 %
 \begin{document}
-
+\SweaveOpts{engine=R}
 
 \onehalfspacing
 \lhead{\normalsize\textsf{SCRS/2012/XXX}}
@@ -144,6 +154,26 @@ Sophy McCully\footnote{Cefas, Lowestoft, UK; ~sophy.mccully@cefas.co.uk;}\\
 \thispagestyle{fancy}
 % ... but not on others
 \pagestyle{empty}
+
+<<libraries_and_data_and_such, echo=FALSE>>=
+    library(FLAdvice)
+    library(xtable)
+    source("../mygislasim.r")
+    # Load dataset
+    lhdf <- read.csv("../Gislasim LH elasmo params v2.csv")
+    # sort them
+    lhdf <- lhdf[order(lhdf$species),]
+    # Get the gislasim parameters
+    gisparsdf <- ddply(lhdf, .(species,sex,variant), gismysharkup)
+    gisparsall <- cast(gisparsdf, species + sex + variant ~ params, value = "data")
+@
+
+<<label=run_analysis_or_cheat,echo=FALSE>>=
+    # run analysis
+    #stks <- dlply(gisparsdf, .(species,sex,variant), brpmaker)
+    # or cheat
+    load("../stks.RData")
+@
 
 %
 \begin{abstract}
@@ -159,7 +189,7 @@ such as age at first reproduction, natural mortality, and growth rate. This mean
 that from something that is easily observable, like the maximum size, it may be
 possible to parameterise life history processes, such as growth and maturation.
 In this study we generate biologically plausible, age-structured stocks
-for 26 elasmobranch species, based on their life history parameter. We then
+for \Sexpr{length(unique(gisparsall$species))} elasmobranch species, based on their life history parameter. We then
 estimate values for the precautionary reference point $F_{0.1}$. As the empirical
 relationships used in the analysis are mostly based on teleost data, they may not
 be appropriate for all of the elasmobranch species included. The potential impact
@@ -169,7 +199,9 @@ of this on the robustness of the results is discussed.}
 
 \Keywords{data-poor, FLR, life history relationships, reference points}	
 
- 
+%--------------------------------------------------------------------------------------
+
+
 \newpage
 \section[Introduction]{Introduction}
 
@@ -198,7 +230,8 @@ The simulator will also allow biological operating models of these stocks to be 
 be used for Managemement Strategy Evaluation (MSE). This will allow MSE to be extended
 to data-poor stocks such as bycaught species.
 
-In this study we generate biologically plausible, age-structured models for 26 elasmobranch species
+In this study we generate biologically plausible, age-structured models for \Sexpr{length(unique(gisparsall$species))}
+elasmobranch species
 using the life history relationships described in~\citet{gislason2010does} and~\citet{gislason2008coexistence}.
 We also estimate reference points.
 The life history relationships are modelled in R using the FLR simulation framework.
@@ -318,20 +351,24 @@ This allows knowledge of factors such as gear selectivity, availability and post
 \section{Species data}
 \label{Species}
 
-24 species of elasmobranchs were examined.
+\Sexpr{length(unique(gisparsall$species))} species of elasmobranchs were examined.
 The data required for each species was a value for $L_{\infty}$, $k$, $t_0$, $a$, $b$,
 $L_{50}$ and $Lto5$ (the difference between the $L_{50}$ and $L_{5}$).
 $L_{5}$ was taken to be the length of first maturity
 Sex disaggregated data was used where available (for some species, sex disaggregated
 and sex combined data is included to allow comparison).
-The data can be seen in TABLE
+The data can be seen in table~\ref{tab:RawLHparams}. It is clear that
+some species have more data than others. For some species only a value of
+$L_{max}$ is available (e.g. Greenland Shark), whilst for others there are
+values for all required parameters (e.g. Thornback Ray). The species with less
+data will have the least reliable estimates of reference point values.
 
 Where data was not available the relationships in MateralandMethods was used.
-The minimum data requirement was a value for $L_{max}$. If L_{\infty}$ was not
+The minimum data requirement was a value for $L_{max}$. If $L_{\infty}$ was not
 available it was estimated from using REF:
 
 \begin{equation}
-log10(L_{\infty}) = 0.044 + 0.9841 \times log10(l_{max}) \label{eqLmaxLinf}
+log10(L_{\infty}) = 0.044 + 0.9841 \times log10(L_{max}) \label{eqLmaxLinf}
 \end{equation}
 
 For example, if only a value of $L_{max}$ was available, this was used to estimate
@@ -340,8 +377,9 @@ $L_{50}$ and $Lto5$. If however, values for the other parameters were available
 these were used instead of the estimated ones. This means that the more
 empirical information provided, the less the model stock is based on estimated
 values and should therefore be more biologicall realistic.
-If no value of $L_{50{$ was available, then $Lto5$ was always set to 1.
-The full set of estimated values can be seen in TABLE.
+If no value of $L_{50}$ was available, then $Lto5$ was always set to 1.
+Default values for $a$ and $b$ are 1e\-5 and 3 respectively.
+The full set of estimated values can be seen in table~\ref{tab:GisLHparams}.
 
 As mentioned above the value of the reference points depends on the fishing selectivity.
 Here selectivity was modelled as a knife edge pattern which goes through $a_{50}$.
@@ -351,6 +389,12 @@ Here selectivity was modelled as a knife edge pattern which goes through $a_{50}
 Plots of wts, mats, ms
 Table of refpts
 
+Table~\ref{tab:RefPts}
+Figure~\ref{fig:stockwts}
+Figure~\ref{fig:mat}
+Figure~\ref{fig:m}
+
+Talk about these
 
 \section{Discussion}\label{Discussion}
 
@@ -362,7 +406,10 @@ Importance of the differences for species management exploring assumptions
 Possible recommendation as to LH use for marine resource management (depending on results!!) 
 
 Wisdom of using empirical relationships from teleosts for elasmobranchs.
-Weird results. For example, the value for the age at which 50\% of individuals are
+
+Weird results.
+
+For example, the value for the age at which 50\% of individuals are
 mature ($a_{50}$) for females is 5, whereas for males it is 12, despite the female
 $l_{50}$ value being higher than for males. This is a result of the growth parameter
 assumed for males and females. Here, we are providing a value for $k$ for males,
@@ -370,7 +417,6 @@ but having to estimate a value for females. This estimated value may not be appr
 
 
 \section{Conclusions}\label{Conclusions}
-
 
 Concluding remarks for specific species
 
@@ -380,6 +426,137 @@ Concluding remarks for specific species
 
 \bibliography{refs}{}
 \bibliographystyle{plain}
+
+
+\section{Tables}
+\label{Tables}
+
+% Table of raw data
+<<label=prepare_raw_data_table, echo=FALSE>>=
+    # keep columns we want
+    lhtab <- lhdf[,c("species","sex","lmax","linf","k","t0","a","b","l50","lto5")]
+    dimnames(lhtab)[[1]] <- paste(lhtab[,1],lhtab[,2])
+    lhtab <- lhtab[,-c(1,2)]
+    dimnames(lhtab)[[2]] <- c("$L_{max}$", "$L_{\\infty}$", "$k$", "$t_0$", "$a$", "$b$", "$L_{50}$", "$Lto5$")
+
+    LHxtable <- xtable(lhtab,
+				    caption="Raw life history parameters",
+				    label="tab:RawLHparams",
+				    align = c("r|c|c|c|c|c|c|c|c"),
+				    digits=c(NA,0,0,3,3,-3,3,0,0))
+@
+
+<<label=write_RawLHparams_table, results=tex, echo=FALSE>>=
+    print(LHxtable,
+	sanitize.text.function = function(x) x)
+@
+
+% Prepare life history table
+<<label = prepare_gis_lh_table, echo=FALSE>>=
+    # Keep columns we want
+    gisparstab <- gisparsall[,c(1,2,4,5,6,7,13,14,16,18)]
+    # Set row names
+    dimnames(gisparstab)[[1]] <- paste(gisparstab[,1],gisparstab[,2])
+    gisparstab <- gisparstab[,-c(1,2)]
+    # Set dimnames
+    dimnames(gisparstab)[[2]] <- c("$L_{\\infty}$", "$t_0$", "$a$", "$b$", "$k$", "$M1$", "$Ato5$", "$A_{50}$")
+    gisLHxtable <- xtable(gisparstab,
+				    caption="Life history parameters from raw data and empirical life history relationships",
+				    label="tab:GisLHparams",
+				    align = c("r|c|c|c|c|c|c|c|c"),
+				    digits=c(NA,0,3,-3,3,3,3,0,0))
+@
+
+<<label=write_GisLHparams_table, results=tex, echo=FALSE>>=
+    print(gisLHxtable,
+	sanitize.text.function = function(x) x)
+@
+
+% Reference points
+<<label = calc_reference_points, echo = FALSE>>=
+    getSpr0F01Fmax <- function(brp){
+        f0.1 <- c(refpts(brp)["f0.1","harvest"])
+        fmax <- c(refpts(brp)["fmax","harvest"])
+        spr0 <- c(spr0(brp))
+        return(data.frame(spr0 = spr0, f0.1 = f0.1, fmax = fmax))
+    }
+    fRefPtsLH <- ldply(stks, getSpr0F01Fmax)
+    # Keep columns we want
+    reftab <- fRefPtsLH[,c(1,2,4,5)]
+    # Set row names
+    dimnames(reftab)[[1]] <- paste(reftab[,1],reftab[,2])
+    reftab <- reftab[,-c(1,2)]
+    # Set dimnames
+    dimnames(reftab)[[2]] <- c("spr0", "F0.1")
+
+    reftab <- xtable(reftab,
+				    caption="Estimated reference values",
+				    label="tab:RefPts",
+				    align = c("r|c|c"),
+				    digits=c(NA,3,3))
+@
+
+<<label=write_refpts_table, results=tex, echo=FALSE>>=
+    print(reftab,
+	sanitize.text.function = function(x) x)
+@
+
+
+\section{Figures}
+% From this point on, make all figs text width
+% So if you use width and height in the <<>> bit, that scales the initial pdf
+% PDF then gets included in the final document with width = x * textwidth
+% and height set according the ratio in the width and height in the <<>>
+% i.e. relative dimensions have been set in the <<>> bit
+
+\setkeys{Gin}{width=1\textwidth}
+
+<<label=pull_out_measures, echo=FALSE>>=
+    pullOutMeasures <- function(brp){
+        dat <- rbind(
+               cbind(variable = "stock.wt", as.data.frame(stock.wt(brp))),
+               cbind(variable = "m", as.data.frame(m(brp))),
+               cbind(variable = "mat", as.data.frame(mat(brp)))
+              )
+    # Chop out unwanted columns
+    dat <- dat[,c("variable","age","data")]
+    return(dat)
+    }
+    stk_summary <- ldply(stks, pullOutMeasures)
+@
+
+\begin{figure}
+<<label=plot_stock_wts, fig=TRUE, echo = FALSE, height = 10, width = 8>>=
+p <- ggplot(stk_summary[stk_summary$variable == "stock.wt",]) + geom_point(aes(x=age, y = data, group = sex, colour = sex)) +
+                      geom_line(aes(x=age, y = data, group = sex, colour = sex))
+p <- p + facet_wrap(~species, scales = "free", ncol = 4)
+print(p)
+@
+\caption{Estimated stock weights by age}
+\label{fig:stockwts}
+\end{figure}
+
+\begin{figure}
+<<label=plot_mat, fig=TRUE, echo = FALSE, height = 10, width = 8>>=
+p <- ggplot(stk_summary[stk_summary$variable == "mat",]) + geom_point(aes(x=age, y = data, group = sex, colour = sex)) +
+                      geom_line(aes(x=age, y = data, group = sex, colour = sex))
+p <- p + facet_wrap(~species, scales = "free", ncol = 4)
+print(p)
+@
+\caption{Estimated proportion mature by age}
+\label{fig:mat}
+\end{figure}
+
+\begin{figure}
+<<label=plot_m, fig=TRUE, echo = FALSE, height = 10, width = 8>>=
+p <- ggplot(stk_summary[stk_summary$variable == "m",]) + geom_point(aes(x=age, y = data, group = sex, colour = sex)) +
+                      geom_line(aes(x=age, y = data, group = sex, colour = sex))
+p <- p + facet_wrap(~species, scales = "free", ncol = 4)
+print(p)
+@
+\caption{Estimated natural mortality by age}
+\label{fig:m}
+\end{figure}
 
 
 \end{document}
