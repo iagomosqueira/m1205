@@ -1,0 +1,424 @@
+% $Id: $
+\documentclass[a4paper, 10pt]{article}
+% reduced margins
+\usepackage{fullpage}
+\usepackage[authoryear]{natbib}
+% spacing
+\usepackage{setspace}
+% page headings
+\usepackage{fancyhdr}
+%\usepackage{lscape}
+
+\setlength{\headheight}{15.2pt}
+\pagestyle{fancy}
+% urls
+
+\usepackage{lscape}
+\usepackage{graphicx}
+\usepackage{color}
+\usepackage{hyperref}
+\usepackage{url}
+\hypersetup{colorlinks, urlcolor=darkblue}
+
+\usepackage{listings}
+
+\definecolor{darkblue}{rgb}{0,0,0.5}
+\definecolor{shadecolor}{rgb}{1,1,0.95}
+\definecolor{shade}{rgb}{1,1,0.95}
+
+
+\lstset{ %
+language=R, % the language of the code
+basicstyle=\footnotesize, % the size of the fonts that are used for the code
+numbers=left, % where to put the line-numbers
+numberstyle=\footnotesize, % the size of the fonts that are used for the line-numbers
+stepnumber=100, % the step between two line-numbers. If it's 1, each line 
+ % will be numbered
+numbersep=5pt, % how far the line-numbers are from the code
+backgroundcolor=\color{shade}, % choose the background color. You must add \usepackage{color}
+showspaces=false, % show spaces adding particular underscores
+showstringspaces=false, % underline spaces within strings
+showtabs=false, % show tabs within strings adding particular underscores
+frame=single, % adds a frame around the code
+tabsize=2, % sets default tabsize to 2 spaces
+captionpos=b, % sets the caption-position to bottom
+breaklines=true, % sets automatic line breaking
+breakatwhitespace=false, % sets if automatic breaks should only happen at whitespace
+title=\lstname, % show the filename of files included with \lstinputlisting;
+ % also try caption instead of title
+escapeinside={\%*}{*)}, % if you want to add a comment within your code
+morekeywords={*,...} % if you want to add more keywords to the set
+}
+
+\usepackage{lscape}
+% figs to be 75% of test width
+\setkeys{Gin}{width=0.75\textwidth}
+
+
+%
+\renewcommand{\abstractname}{\large SUMMARY}
+%
+\newcommand{\Keywords}[1]{\begin{center}\par\noindent{{\em KEYWORDS\/}: #1}\end{center}}
+%
+\makeatletter
+\renewcommand{\subsubsection}{\@startsection{subsubsection}{3}{\z@}%
+ {-1.25ex\@plus -1ex \@minus -.2ex}%
+ {1.5ex \@plus .2ex}%
+ {\normalfont\slshape}}
+\renewcommand{\subsection}{\@startsection{subsection}{2}{\z@}%
+ {-3.25ex\@plus -1ex \@minus -.2ex}%
+ {1.5ex \@plus .2ex}%
+ {\normalfont\bfseries\slshape}}
+\renewcommand{\section}{\@startsection{section}{1}{\z@}%
+ {-5.25ex\@plus -1ex \@minus -.2ex}%
+ {1.5ex \@plus .2ex}%
+ {\normalfont\bfseries}}
+\makeatother
+%
+\renewcommand\thesection{\arabic{section}.}
+\renewcommand\thesubsection{\thesection\arabic{subsection}}
+\renewcommand\thesubsubsection{\thesubsection\arabic{subsubsection}}
+%
+\renewcommand{\headrulewidth}{0pt}
+
+\usepackage{listings}
+
+\newenvironment{mylisting}
+{\begin{list}{}{\setlength{\leftmargin}{1em}}\item\scriptsize\bfseries}
+{\end{list}}
+
+\newenvironment{mytinylisting}
+{\begin{list}{}{\setlength{\leftmargin}{1em}}\item\tiny\bfseries}
+{\end{list}}
+
+\usepackage{listings}
+
+\definecolor{darkblue}{rgb}{0,0,0.5}
+\definecolor{shadecolor}{rgb}{1,1,0.95}
+\definecolor{shade}{rgb}{1,1,0.95}
+
+
+\lstset{ %
+language=R, % the language of the code
+basicstyle=\footnotesize, % the size of the fonts that are used for the code
+numbers=left, % where to put the line-numbers
+numberstyle=\footnotesize, % the size of the fonts that are used for the line-numbers
+stepnumber=100, % the step between two line-numbers. If it's 1, each line 
+ % will be numbered
+numbersep=5pt, % how far the line-numbers are from the code
+backgroundcolor=\color{shade}, % choose the background color. You must add \usepackage{color}
+showspaces=false, % show spaces adding particular underscores
+showstringspaces=false, % underline spaces within strings
+showtabs=false, % show tabs within strings adding particular underscores
+frame=single, % adds a frame around the code
+tabsize=2, % sets default tabsize to 2 spaces
+captionpos=b, % sets the caption-position to bottom
+breaklines=true, % sets automatic line breaking
+breakatwhitespace=false, % sets if automatic breaks should only happen at whitespace
+title=\lstname, % show the filename of files included with \lstinputlisting;
+ % also try caption instead of title
+escapeinside={\%*}{*)}, % if you want to add a comment within your code
+morekeywords={*,...} % if you want to add more keywords to the set
+}
+
+%
+\title{Estimating reference points for elasmobranchs using life history theory.}
+%
+\author{
+%Laurence T. Kell\footnote{ICCAT Secretariat, C/Coraz\'{o}n de Mar\'{\i}a, 8. 28002 Madrid, Spain; ~Laurie.Kell@iccat.int; ~Phone: +34 914 165 600 ~Fax: +34 914 152 612.}\\
+Finlay Scott\footnote{Cefas, Lowestoft, UK; ~finlay.scott@cefas.co.uk;}\\
+Sophy McCully\footnote{Cefas, Lowestoft, UK; ~finlay.scott@cefas.co.uk;}\\
+}
+%
+\date{}
+%
+\begin{document}
+
+
+\onehalfspacing
+\lhead{\normalsize\textsf{SCRS/2012/XXX}}
+\rhead{}
+
+\maketitle
+% gets headers on title page ...
+\thispagestyle{fancy}
+% ... but not on others
+\pagestyle{empty}
+
+%
+\begin{abstract}
+
+\textit{The adoption of the precautionary approach for fisheries management requires
+a formal consideration of uncertainty, for example, in the quality of the available
+data and knowledge of the stocks and fisheries. An important principle is that the
+level of precaution should increase with uncertainty about stock status, so that
+the level of risk is approximately constant across stocks.
+However, even though data may be limited for some stocks, empirical studies of teleosts
+have shown that there is significant correlation between the life history parameters
+such as age at first reproduction, natural mortality, and growth rate. This means
+that from something that is easily observable, like the maximum size, it may be
+possible to parameterise life history processes, such as growth and maturation.
+In this study we generate biologically plausible, age-structured stocks
+for 26 elasmobranch species, based on their life history parameter. We then
+estimate values for the precautionary reference point $F_{0.1}$. As the empirical
+relationships used in the analysis are mostly based on teleost data, they may not
+be appropriate for all of the elasmobranch species included. The potential impact
+of this on the robustness of the results is discussed.}
+
+\end{abstract}
+
+\Keywords{data-poor, FLR, life history relationships, reference points}	
+
+ 
+\newpage
+\section[Introduction]{Introduction}
+
+The adoption of the precautionary approach~\citet{nla.cat-vn1639801} for fisheries management requires
+a formal consideration of uncertainty, for example, in the quality of the available
+data and knowledge of the stocks and fisheries. An important principle is that the
+level of precaution should increase with uncertainty about stock status, so that
+the level of risk is approximately constant across stocks.
+However, even though data may be limited for some stocks, empirical studies of teleosts
+have shown that there is significant correlation between the life history parameters
+such as age at first reproduction, natural mortality and growth rate~\citet{roff1984evolution}. This means
+that from something that is easily observable like the maximum size it may be
+possible to parameterise life history processes, such as growth and maturation.
+Additionally, size-spectrum theory and multispecies models suggest that many biological processes
+scale with body size and this can be used to restrict the biologically plausible
+parameter space of these processes ~\citet{andersen2006asymptotic},~\citet{pope2006modelling} and \citet{gislason2008coexistence}.
+
+Using these relationships and parameters it is possible to simulate a biologically plausible stock,
+even when detailed knowledge of the stock is unknown or very uncertain, i.e. the stock is considered
+to be data-poor. This simulator can be used to conduct sensitivity or other types of analyses
+and may assist in the development of general rules, for example, about reference points (e.g.~\citet{williams2003implications}).
+For example within theoretical ecology, population dynamics have been classified as high or low risk using life
+history traits. Since those stocks or species with low productivity and a long life span will be expected to respond differently to
+fishing and management interventions when compared to those with a short life span and high productivity.
+The simulator will also allow biological operating models of these stocks to be built which can then
+be used for Managemement Strategy Evaluation (MSE). This will allow MSE to be extended
+to data-poor stocks such as bycaught species.
+
+In this study we generate biologically plausible, age-structured models for 26 elasmobranch species
+using the life history relationships described in~\citet{gislason2010does} and~\citet{gislason2008coexistence}.
+We also estimate reference points.
+The life history relationships are modelled in R using the FLR simulation framework.
+
+\section{Material and Methods}
+
+\citet{gislason2010does} summarised life history characteristics and the relationships
+between them for a range of stocks and species. These relationships are described in
+Section~\ref{LifeHistoryRelationships}.
+
+The life history is then used to parameterise an age-structured equilibrium model, where SSB-per-recruit, yield-per-recruit
+and stock-recruitment analyses are combined. SSB-per-recruit ($S/R$) is then given by:
+
+\begin{equation}
+S/R=\sum\limits_{a=r}^{n-1} {e^{\sum\limits_{i=r}^{a-1} {-F_i-M_i}}} W_a Q_a + e^{\sum\limits_{i=r}^{n-1} {-F_n-M_n}} \frac{W_n Q_n}{1-e_{-F_n-M_n}} \label{eqSR}
+\end{equation} 
+
+Where $F$, $M$, $Q$ and $W$ are fishing mortality, natural mortality, proportion mature
+and mass-at-age, and $a$ is age, $n$ the oldest age and $r$ age at recruitment.
+The 2nd term is the plus-group (i.e. the summation of all ages from the last age to infinity).
+
+Similarily for yield per recruit ($Y/R$):
+
+\begin{equation}
+Y/R=\sum\limits_{a=r}^{n-1} {e^{\sum\limits_{i=r}^{a-1} {-F_i-M_i}}} W_a\frac{F_a}{F_a+M_a}\left(1-e^{-F_i-M_i} \right) + e^{\sum\limits_{i=r}^{n-1} {-F_n-M_n}} W_n\frac{F_n}{F_n+M_n} \label{eqYR}
+\end{equation} 
+
+The stock recruitment relationship can then be reparameterised so that recruitment $R$ is a function of $S/R$
+e.g. for a Beverton and Holt REF (1957):
+
+\begin{equation}
+S/R=(b+S)/a \label{eqBH}
+\end{equation} 
+
+and Ricker formulation (REF):
+
+\begin{equation}
+S/R=e^{bS}/S \label{eqRick}
+\end{equation} 
+
+$S$ then be derived from $F$ by combining equation \ref{eqBH} or \ref{eqRick} with equation \ref{eqSR}.
+
+\subsection{Life History Relationship}
+\label{LifeHistoryRelationships}
+
+There are various models to describe growth, maturation and natural mortality and the relationships between them.
+
+Here we model growth by \citep{von1957quantitative}:
+
+\begin{equation}
+L_t = L_{\infty} - L_{\infty}exp(-kt) \label{eqVB}
+\end{equation}
+
+Where $L_{\infty}$ is the asymptotic length attainable, $K$ the rate at which the
+rate of growth in length declines as length approaches $L_{\infty}$ and $t_{0}$ is the time at
+which an individual is of zero length.
+
+Mass-at-age can be derived from length using a scaling exponent ($a$) and the condition factor ($b$).
+
+\begin{equation}
+W_t = a \times W_t^b \label{eqLW}
+\end{equation}
+
+Natural mortality ($M$) at-age can then be derived from the life history relationship \citet{gislason2010does}:
+
+\begin{equation}
+log(M) = a - b \times log(L_{\infty}) + c \times log(L) + d \times log(k) - \frac{e}{T} \label{eqGisM}
+\end{equation} 
+
+where $L$ is the average length of the fish (in cm) for which the $M$ estimate applies.
+
+% In lh() the FishBase relationship is used. How to reference?
+%Maturity ($Q$) can be derived as in Williams and Shetzer (2003) from the theoretical relationship between M, K, and age at maturity $a_{Q}$
+%based on the dimensionless ratio of length at maturity to asymptotic length \citep{beverton1992patterns}.
+%\begin{equation}
+%a_{Q}=a \times L_{\infty}-b
+%\end{equation}
+
+The age at which 50\% of individuals are mature is given by:
+
+\begin{equation}
+a_{50} = 0.72 \times L_{\infty}^{0.93} \label{eqFBa50}
+\end{equation}
+
+
+\subsection{Seasonality}
+
+The simulation model is a discrete population model where the number of individuals
+in a year-class in year is a function of the number of individuals in the previous year.
+However, processes like growth, maturation, natural mortality and fishing occur in
+different seasons of the year. Therefore to take account of this the age for which
+the expected values of mass, maturity and natural mortality-at-age can vary. 
+
+For the stock, lengths-at-age, mass-at-age and size-based maturity are calculated at spawning time.
+Fishing is assumed to happen mid year so the catch length-at-age, mass-at-age and
+size-based selectivity is calculated at mid year. Natural mortality is a function
+of the lengths-at-age mid year.
+
+\subsection{Stock Recruitment Relationships}
+
+Stock recruitment relationships are needed to formulate management advice, e.g.
+when estimating reference points such as MSY and $F_{crash}$ and making stock projections.
+Often stock recruitment relationships are reparamterised in terms of steepness and
+virgin biomass, where steepness is the ratio of recruitment at 20\% of virgin biomass
+% Why do then use 20% below?
+to recruitment at virgin biomass. However, steepness is difficult to estimate from
+stock assessment data sets and there is often insufficient range in biomass levels
+that would allow the estimation of steepness \citet{ISSF2011steep}.
+
+Here, we use a Beverton and Holt stock recruitment relationship reformulated in
+terms of steepness ($h$), virgin biomass ($v$) and $S/R_{F=0}$. It is noted that
+this relationship may not be appopriate for all elasmobranch species. However, it
+is used here in lieu of another formulation:
+
+\begin{equation}
+R=\frac{0.8 \times R_0 \times h \times S}{0.2 \times S/R_{F=0} \times R_0(1-h)+(h-0.2)S} \label{eqBHsteepness}
+\end{equation} 
+
+
+\subsection{Reference Points}
+
+To estimate reference points from an aged based model requires a selection pattern
+as well as biological characteristics to be considered.
+This is because not all ages are equally vulnerable to a fishery. For example,
+if there is a refuge for older fish a higher level of fishing effort will be sustainable.
+$F_{MSY}$, the level of exploitation that would provide the maximum sustainable yield, and $F_{Crash}$
+the level of exploitation that will drive the stock to extinction, both depend upon the selection pattern.
+
+Even in data poor situtations where catch-at-age for the entire catch time series
+is not available, some data will normally exist for some years or gears or for similar
+stocks and species. In cases where some length frequency data are available the selection
+pattern can be estimated using a method like that of Powell-Wetherall \citep{wetherall1987estimating}.
+This method calculates Z from samples of numbers at length, in a plot of the difference
+between a size class and the mean size of fish  greater than this size class is plotted
+against the length of the size class the slope is equal to $-K/(Z+K)$ and the x intercept
+is equal to $L_{\infty}$. The plot allows $L_{\infty}$ and an estimate of $Z$ to
+be obtained, while the shape of the selectivity function can also be infered from the inflection point.
+
+Here, the selectivity of the fishery is represented a double normal formulation (REF see Hilborn et al. 2001) which
+allows the peak selectivity age and either a flat topped or dome shaped selection pattern to be selected.
+This allows knowledge of factors such as gear selectivity, availability and post-capture mortality to be modelled.
+
+\section{Example}
+
+As an example we simulated 4 stocks with two values of $L_{\infty}$ and two selection
+patterns where the age at full selection was either equal to age at 50\% mature or 2 years
+older. In addition, we simulated stochastic recruitment for one of the stocks.
+
+%Calculating reference points and performing projections requires a variety of parameters.
+%Some like growth and maturity are relatively easy to observe, while others such
+%as natural mortality and stock recruitment parameters can not be
+%observed directly and are difficult to estimate even within a data rich assessment.
+
+%Life history relationships can be used to parameterise reference points and projections
+%calculations, if only the maximum size or $L_{\infty}$ of a stock is known.
+To evaluate the performance using life history relationship we compare reference points
+and projections made using stocks based only on life history parameters to stocks that
+are based on an assessment, i.e. data-poor vs data-rich.
+
+We consider the following factors and levels for the biological parameters and the stock recruitment relationship.
+
+\begin{enumerate}
+  \item \textbf{Biological Parameters}
+  \begin{enumerate}
+    \item Life history parameters based on $L_{\infty}$
+    \item Life history parameters based on $L_{\infty}$ and $K$  
+    \item Life history parameters based on $L_{\infty}$, $K$, maturity known  
+    \item Multifan-CL Assessment
+  \end{enumerate}
+  \item \textbf{Steepness}
+  \begin{enumerate}
+    \item 0.9
+    \item 0.75
+  \end{enumerate}
+\end{enumerate}
+
+For the biological parameters the first level corresponds to where all values are based on $L_{\infty}$, the second where these are based on 
+$L_{\infty}$ and $K$, the third as in the second level but maturity is known (i.e. the same as in the fourth level) and the fourth level is where
+all values are taken from the assessment.
+
+The stock recruitment realtionship was assumed to be of a Beverton and Holt functional form, reparameterised as steepness and virgin biomass.
+For ease of comparison virgin biomass was fixed at 1000 and to reflect uncertainty about recruitment at low spawning stock sizes steepness is either 0.9 or 0.75. 
+Such a reparameterisation is a three parameter model since the the value of $S/R$ at zero fishing mortality is also required; this of varies depending on 
+the biological parameters and so the stock recruitment parameters were re-estimted for the four levls of the biological parameters. 
+
+
+\section{Results}\label{Results}
+
+The parameters M, maximum length, $L_{\infty}$ and k from \citep{gislason2010does} are plotted in figure 1
+The corresponding equilibrium curves, with reference points are shown in figure 2.
+The relationship between $log(K)$ and $log(L_{\infty})$ , is explored further in figure 3.
+In figure 4 the mass, m and proportion mature-at-age based on the assessment, $L_{\infty}$ and $L_{\infty}$ and k 
+are plotted and compared to those  predicted by life history relationships.
+A length frequency distribution for SPECIS NAME is plotted in figure 5 and the correponding Powell-Wetherall is plotted in figure 6.
+The Equilibrium values of yield are plotted against fishing mortality in figure 7 along with the MSY reference points.
+The Equilibrium values of yield are plotted against SSB in figure 8 along with the MSY reference points. 
+
+
+\section{Discussion}\label{Discussion}
+
+Discussion on limited application of this method to marine resources
+Applicability of this method to data poor stocks and for keeping assumptions between LH parameters for modelling purposes consistent 
+Differences (if any) between assessment/biologically opbserved parameters and LH generated parameters
+Effects of differences on key reference points
+Importance of the differences for species management exploring assumptions
+Possible recommendation as to LH use for marine resource management (depending on results!!) 
+
+
+\section{Conclusions}\label{Conclusions}
+
+
+Concluding remarks for specific species
+
+%--------------------------------------------------------------------------------------
+% References
+%--------------------------------------------------------------------------------------
+
+\bibliography{refs}{}
+\bibliographystyle{plain}
+
+
+\end{document}
+
