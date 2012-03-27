@@ -1,4 +1,5 @@
-% setwd("C:/Projects/m1205/gislaSim/ERA_PSA/tex")
+% setwd("c:/Projects/m1205/gislaSim/ERA_PSA/tex")
+% setwd("m:/Projects/MF1205/m1205/gislaSim/ERA_PSA/tex")
 % Sweave("SCRS_PSA1_sweave.rnw", syntax="SweaveSyntaxNoweb")
 % pdflatex SCRS_PSA1_sweave.tex
 
@@ -132,12 +133,14 @@ morekeywords={*,...} % if you want to add more keywords to the set
 
 %--------------------------------------------------------------------------------------
 
-\title{Estimating reference points for elasmobranchs using life history theory.}
+\title{Estimating reference points for elasmobranchs using life history theory.\\
+DRAFT. NOT TO BE CITED WITHOUT AUTHORS PERMISSION
+}
 %
 \author{
-%Laurence T. Kell\footnote{ICCAT Secretariat, C/Coraz\'{o}n de Mar\'{\i}a, 8. 28002 Madrid, Spain; ~Laurie.Kell@iccat.int; ~Phone: +34 914 165 600 ~Fax: +34 914 152 612.}\\
 Finlay Scott\footnote{Cefas, Lowestoft, UK; ~finlay.scott@cefas.co.uk;}\\
 Sophy McCully\footnote{Cefas, Lowestoft, UK; ~sophy.mccully@cefas.co.uk;}\\
+Laurence T. Kell\footnote{ICCAT Secretariat, C/Coraz\'{o}n de Mar\'{\i}a, 8. 28002 Madrid, Spain; ~Laurie.Kell@iccat.int; ~Phone: +34 914 165 600 ~Fax: +34 914 152 612.}\\
 }
 %
 \date{}
@@ -189,11 +192,13 @@ such as age at first reproduction, natural mortality, and growth rate. This mean
 that from something that is easily observable, like the maximum size, it may be
 possible to parameterise life history processes, such as growth and maturation.
 In this study we generate biologically plausible, age-structured stocks
-for \Sexpr{length(unique(gisparsall$species))} elasmobranch species, based on their life history parameter. We then
-estimate values for the precautionary reference point $F_{0.1}$. As the empirical
+for \Sexpr{length(unique(gisparsall$species))} elasmobranch species, based on their
+life history parameters. We then estimate values for the precautionary reference
+point $F_{0.1}$, a conservative proxy for $F_{MSY}$. As the empirical
 relationships used in the analysis are mostly based on teleost data, they may not
-be appropriate for all of the elasmobranch species included. The potential impact
-of this on the robustness of the results is discussed.}
+be appropriate for all of the elasmobranch species included here given their different
+life history strategies. The potential impact of this on the robustness of the results
+is discussed and suggestions made for future improvements.}
 
 \end{abstract}
 
@@ -205,24 +210,24 @@ of this on the robustness of the results is discussed.}
 \newpage
 \section[Introduction]{Introduction}
 
-The adoption of the precautionary approach~\citet{nla.cat-vn1639801} for fisheries management requires
+The adoption of the precautionary approach~\cite{nla.cat-vn1639801} for fisheries management requires
 a formal consideration of uncertainty, for example, in the quality of the available
 data and knowledge of the stocks and fisheries. An important principle is that the
 level of precaution should increase with uncertainty about stock status, so that
 the level of risk is approximately constant across stocks.
 However, even though data may be limited for some stocks, empirical studies of teleosts
 have shown that there is significant correlation between the life history parameters
-such as age at first reproduction, natural mortality and growth rate~\citet{roff1984evolution}. This means
+such as age at first reproduction, natural mortality and growth rate~\cite{roff1984evolution}. This means
 that from something that is easily observable like the maximum size it may be
 possible to parameterise life history processes, such as growth and maturation.
 Additionally, size-spectrum theory and multispecies models suggest that many biological processes
 scale with body size and this can be used to restrict the biologically plausible
-parameter space of these processes ~\citet{andersen2006asymptotic},~\citet{pope2006modelling} and \citet{gislason2008coexistence}.
+parameter space of these processes ~\cite{andersen2006asymptotic},~\cite{pope2006modelling} and \cite{gislason2008coexistence}.
 
 Using these relationships and parameters it is possible to simulate a biologically plausible stock,
 even when detailed knowledge of the stock is unknown or very uncertain, i.e. the stock is considered
 to be data-poor. This simulator can be used to conduct sensitivity or other types of analyses
-and may assist in the development of general rules, for example, about reference points (e.g.~\citet{williams2003implications}).
+and may assist in the development of general rules, for example, about reference points (e.g.~\cite{williams2003implications}).
 For example within theoretical ecology, population dynamics have been classified as high or low risk using life
 history traits. Since those stocks or species with low productivity and a long life span will be expected to respond differently to
 fishing and management interventions when compared to those with a short life span and high productivity.
@@ -230,18 +235,18 @@ The simulator will also allow biological operating models of these stocks to be 
 be used for Managemement Strategy Evaluation (MSE). This will allow MSE to be extended
 to data-poor stocks such as bycaught species.
 
-In this study we generate biologically plausible, age-structured models for \Sexpr{length(unique(gisparsall$species))}
-elasmobranch species
-using the life history relationships described in~\citet{gislason2010does} and~\citet{gislason2008coexistence}.
-We also estimate reference points.
+In this study we generate biologically plausible, age-structured models for
+\Sexpr{length(unique(gisparsall$species))} elasmobranch species
+using the life history relationships described in~\cite{gislason2010does}
+and~\cite{gislason2008coexistence} and also estimate reference points.
 The life history relationships are modelled in R using the FLR simulation framework.
 
 \section{Material and Methods}
 \label{MateralandMethods}
 
-\citet{gislason2010does} summarised life history characteristics and the relationships
+\cite{gislason2010does} summarised life history characteristics and the relationships
 between them for a range of stocks and species. These relationships are described in
-Section~\ref{LifeHistoryRelationships}.
+section~\ref{LifeHistoryRelationships}.
 
 The life history is then used to parameterise an age-structured equilibrium model,
 where SSB-per-recruit and yield-per-recruit are combined:
@@ -287,7 +292,7 @@ Mass-at-age can be derived from length using a scaling exponent ($a$) and the co
 W_t = a \times W_t^b \label{eqLW}
 \end{equation}
 
-Natural mortality ($M$) at-age can then be derived from the life history relationship \citet{gislason2010does}:
+Natural mortality ($M$) at-age can then be derived from the life history relationship \cite{gislason2010does}:
 
 \begin{equation}
 log(M) = a - b \times log(L_{\infty}) + c \times log(L) + d \times log(k) - \frac{e}{T} \label{eqGisM}
@@ -343,8 +348,9 @@ against the length of the size class the slope is equal to $-K/(Z+K)$ and the x 
 is equal to $L_{\infty}$. The plot allows $L_{\infty}$ and an estimate of $Z$ to
 be obtained, while the shape of the selectivity function can also be infered from the inflection point.
 
-Here, the selectivity of the fishery is represented a double normal formulation (REF see Hilborn et al. 2001) which
-allows the peak selectivity age and either a flat topped or dome shaped selection pattern to be selected.
+Here, the selectivity of the fishery is represented using a double normal formulation
+%(REF see Hilborn et al. 2001)
+which allows the peak selectivity age and either a flat topped or dome shaped selection pattern to be selected.
 This allows knowledge of factors such as gear selectivity, availability and post-capture mortality to be modelled.
 
 
@@ -363,9 +369,9 @@ $L_{max}$ is available (e.g. Greenland Shark), whilst for others there are
 values for all required parameters (e.g. Thornback Ray). The species with less
 data will have the least reliable estimates of reference point values.
 
-Where data was not available the relationships in MateralandMethods was used.
+Where data was not available the relationships in section~\ref{MateralandMethods} was used.
 The minimum data requirement was a value for $L_{max}$. If $L_{\infty}$ was not
-available it was estimated from using REF:
+available it was estimated from using~\cite{froese_empirical_2000}:
 
 \begin{equation}
 log10(L_{\infty}) = 0.044 + 0.9841 \times log10(L_{max}) \label{eqLmaxLinf}
@@ -386,35 +392,76 @@ Here selectivity was modelled as a knife edge pattern which goes through $a_{50}
 
 \section{Results}\label{Results}
 
-Plots of wts, mats, ms
-Table of refpts
+The estimated stocks weightd, maturity and natural mortality at age for each of
+the stocks can be seen in Figures~\ref{fig:stockwts},~\ref{fig:mat} and~\ref{fig:m}
+respectively.
 
-Table~\ref{tab:RefPts}
-Figure~\ref{fig:stockwts}
-Figure~\ref{fig:mat}
-Figure~\ref{fig:m}
+The estimated values for $F_{0,1}$ can be seen in Table~\ref{tab:RefPts}.
+Pelagic sharks have the most conservative reference points (thresher, mako and
+porbeagle sharks), followed by angel shark, bottlenosed skate and tope. These
+'rankings' correlate exactly to the biological sensitivity ranks from the PSA
+(see table 8 in~\cite{McCully2012}). The only species to
+have scored higher with respect to biology was Greenland shark.
 
-Talk about these
+Greenland shark is only 19th in terms of rank for reference points estimated by
+life history generator, however, it is the most sensitive with respect to biology.
+This is because this species is very data deficient and only $L_{max}$ was given.
+This means all the other life history parameters were estimated using the relationships
+in the life history generator. These are based on teleosts, and thus struggle to
+adequately represent such a large slow growing and slow to mature species.
+
+The combined sex reference points are more precautionary than the individual sex
+based $F_{0.1}$ (also evident in Figures~\ref{fig:stockwts},~\ref{fig:mat} and~\ref{fig:m}
+particularly for rays),
+this is because the life history generator usually has less biological information
+to work with for combined sexes. A good example of this is shortfin mako, which
+has the second lowest reference point for combined sexes (at just 0.042), while
+the individual female and male reference points rank way down in 37th and 46th places
+overall, with far greater values for $F_{0.1}$ of 0.191 and 0.251 respectively.
+For this species, the combined sex estimate is lacking data for $L_{\infty}$, $k$,
+$t_0$ and $L_{50}$, whereas these data are available for the separate sexes,
+allowing more robust estimates of $F_{0.1}$ to be calculated. This is also mirrored
+in other species such as thornback ray. This highlights the 'precautionary' approach
+adopted by Gislasim in the face of limited and uncertain data.
+
+Females should in theory have reference points that are more precautionary than males,
+as they mature later and larger. However this is not the case for all species
+analysed here (e.g. angel shark, tope and spurdog). For all of these species, the
+$L_{50}$ estimates were greater for females than males. As no additional data were
+available for males this needs investigating further.
+
 
 \section{Discussion}\label{Discussion}
 
-Discussion on limited application of this method to marine resources
-Applicability of this method to data poor stocks and for keeping assumptions between LH parameters for modelling purposes consistent 
-Differences (if any) between assessment/biologically opbserved parameters and LH generated parameters
-Effects of differences on key reference points
-Importance of the differences for species management exploring assumptions
-Possible recommendation as to LH use for marine resource management (depending on results!!) 
+The reference point rankings do not correlate well with the PSA ranks~\cite{McCully2012} (either
+including or excluding teleosts), because the life history generator has no consideration
+of the fisheries susceptibility aspect, except for the selectivity assumption, unlike a PSA.
 
-Wisdom of using empirical relationships from teleosts for elasmobranchs.
+Gislasim is based purely on biology, which is why the biological sensitivity rankings in REF
+correlate so well to the reference points.
 
-Weird results.
+Further work is needed to develop this model further, and make the relationships
+more appropriate for species with different life history strategies, such as broadcast
+spawning teleosts. Various trials including species such as egg-laying and guarding
+teleosts (e.g. wolffish), egg-laying elasmobranchs (e.g. skates and ray), and also
+live bearers (e.g. spurdog, tope and pelagic sharks) is desirable.
 
-For example, the value for the age at which 50\% of individuals are
-mature ($a_{50}$) for females is 5, whereas for males it is 12, despite the female
-$l_{50}$ value being higher than for males. This is a result of the growth parameter
-assumed for males and females. Here, we are providing a value for $k$ for males,
-but having to estimate a value for females. This estimated value may not be appropriate.
+%Discussion on limited application of this method to marine resources
+%Applicability of this method to data poor stocks and for keeping assumptions between LH parameters for modelling purposes consistent
+%Differences (if any) between assessment/biologically opbserved parameters and LH generated parameters
+%Effects of differences on key reference points
+%Importance of the differences for species management exploring assumptions
+%Possible recommendation as to LH use for marine resource management (depending on results!!)
 
+%Wisdom of using empirical relationships from teleosts for elasmobranchs.
+
+%Weird results.
+
+%For example, the value for the age at which 50\% of individuals are
+%mature ($a_{50}$) for females is 5, whereas for males it is 12, despite the female
+%$l_{50}$ value being higher than for males. This is a result of the growth parameter
+%assumed for males and females. Here, we are providing a value for $k$ for males,
+%but having to estimate a value for females. This estimated value may not be appropriate.
 
 \section{Conclusions}\label{Conclusions}
 
